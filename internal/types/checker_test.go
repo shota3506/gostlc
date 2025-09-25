@@ -1,6 +1,7 @@
 package types
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/shota3506/gostlc/internal/ast"
@@ -13,19 +14,20 @@ func pos(line, col int) token.Position {
 
 func TestTypeChecker(t *testing.T) {
 	tests := []struct {
-		name         string
-		input        ast.Expr
-		expectedType ast.Type
+		name           string
+		input          ast.Expr
+		checkStructure func(t *testing.T, typed ast.TypedExpr)
+		expected       ast.TypedExpr
 	}{
 		{
-			name:         "boolean literal",
-			input:        &ast.BoolExpr{Value: true},
-			expectedType: &ast.BooleanType{},
+			name:     "boolean literal",
+			input:    &ast.BoolExpr{Pos: pos(1, 1), Value: true},
+			expected: ast.NewTypedBoolExpr(&ast.BoolExpr{Pos: pos(1, 1), Value: true}),
 		},
 		{
-			name:         "integer literal",
-			input:        &ast.IntExpr{Value: 42},
-			expectedType: &ast.IntType{},
+			name:     "integer literal",
+			input:    &ast.IntExpr{Pos: pos(1, 1), Value: 42},
+			expected: ast.NewTypedIntExpr(&ast.IntExpr{Pos: pos(1, 1), Value: 42}),
 		},
 		{
 			name: "identity function",
@@ -33,101 +35,191 @@ func TestTypeChecker(t *testing.T) {
 				Pos:       pos(1, 1),
 				Param:     "x",
 				ParamType: &ast.BooleanType{},
-				Body:      &ast.VarExpr{Name: "x"},
+				Body:      &ast.VarExpr{Pos: pos(1, 10), Name: "x"},
 			},
-			expectedType: &ast.FuncType{
-				From: &ast.BooleanType{},
-				To:   &ast.BooleanType{},
-			},
+			expected: ast.NewTypedAbsExpr(
+				&ast.FuncType{
+					From: &ast.BooleanType{},
+					To:   &ast.BooleanType{},
+				},
+				pos(1, 1),
+				"x",
+				&ast.BooleanType{},
+				ast.NewTypedVarExpr(&ast.BooleanType{}, &ast.VarExpr{Pos: pos(1, 10), Name: "x"}),
+			),
 		},
 		{
 			name: "const function",
 			input: &ast.AbsExpr{
+				Pos:       pos(1, 1),
 				Param:     "x",
 				ParamType: &ast.IntType{},
 				Body: &ast.AbsExpr{
+					Pos:       pos(2, 1),
 					Param:     "y",
 					ParamType: &ast.BooleanType{},
-					Body:      &ast.VarExpr{Name: "x"},
+					Body:      &ast.VarExpr{Pos: pos(2, 10), Name: "x"},
 				},
 			},
-			expectedType: &ast.FuncType{
-				From: &ast.IntType{},
-				To: &ast.FuncType{
-					From: &ast.BooleanType{},
-					To:   &ast.IntType{},
+			expected: ast.NewTypedAbsExpr(
+				&ast.FuncType{
+					From: &ast.IntType{},
+					To: &ast.FuncType{
+						From: &ast.BooleanType{},
+						To:   &ast.IntType{},
+					},
 				},
-			},
+				pos(1, 1),
+				"x",
+				&ast.IntType{},
+				ast.NewTypedAbsExpr(
+					&ast.FuncType{
+						From: &ast.BooleanType{},
+						To:   &ast.IntType{},
+					},
+					pos(2, 1),
+					"y",
+					&ast.BooleanType{},
+					ast.NewTypedVarExpr(&ast.IntType{}, &ast.VarExpr{Pos: pos(2, 10), Name: "x"}),
+				),
+			),
 		},
 		{
 			name: "function application",
 			input: &ast.AppExpr{
+				Pos: pos(1, 1),
 				Func: &ast.AbsExpr{
+					Pos:       pos(1, 1),
 					Param:     "x",
 					ParamType: &ast.BooleanType{},
-					Body:      &ast.VarExpr{Name: "x"},
+					Body:      &ast.VarExpr{Pos: pos(1, 10), Name: "x"},
 				},
-				Arg: &ast.BoolExpr{Value: true},
+				Arg: &ast.BoolExpr{Pos: pos(1, 15), Value: true},
 			},
-			expectedType: &ast.BooleanType{},
+			expected: ast.NewTypedAppExpr(
+				&ast.BooleanType{},
+				pos(1, 1),
+				ast.NewTypedAbsExpr(
+					&ast.FuncType{
+						From: &ast.BooleanType{},
+						To:   &ast.BooleanType{},
+					},
+					pos(1, 1),
+					"x",
+					&ast.BooleanType{},
+					ast.NewTypedVarExpr(&ast.BooleanType{}, &ast.VarExpr{Pos: pos(1, 10), Name: "x"}),
+				),
+				ast.NewTypedBoolExpr(&ast.BoolExpr{Pos: pos(1, 15), Value: true}),
+			),
 		},
 		{
 			name: "if expression with booleans",
 			input: &ast.IfExpr{
-				Cond: &ast.BoolExpr{Value: true},
-				Then: &ast.BoolExpr{Value: false},
-				Else: &ast.BoolExpr{Value: true},
+				Pos:  pos(1, 1),
+				Cond: &ast.BoolExpr{Pos: pos(1, 4), Value: true},
+				Then: &ast.BoolExpr{Pos: pos(1, 10), Value: false},
+				Else: &ast.BoolExpr{Pos: pos(1, 20), Value: true},
 			},
-			expectedType: &ast.BooleanType{},
+			expected: ast.NewTypedIfExpr(
+				pos(1, 1),
+				ast.NewTypedBoolExpr(&ast.BoolExpr{Pos: pos(1, 4), Value: true}),
+				ast.NewTypedBoolExpr(&ast.BoolExpr{Pos: pos(1, 10), Value: false}),
+				ast.NewTypedBoolExpr(&ast.BoolExpr{Pos: pos(1, 20), Value: true}),
+			),
 		},
 		{
 			name: "if expression with integers",
 			input: &ast.IfExpr{
-				Cond: &ast.BoolExpr{Value: true},
-				Then: &ast.IntExpr{Value: 1},
-				Else: &ast.IntExpr{Value: 2},
+				Pos:  pos(1, 1),
+				Cond: &ast.BoolExpr{Pos: pos(1, 4), Value: true},
+				Then: &ast.IntExpr{Pos: pos(1, 10), Value: 1},
+				Else: &ast.IntExpr{Pos: pos(1, 15), Value: 2},
 			},
-			expectedType: &ast.IntType{},
+			expected: ast.NewTypedIfExpr(
+				pos(1, 1),
+				ast.NewTypedBoolExpr(&ast.BoolExpr{Pos: pos(1, 4), Value: true}),
+				ast.NewTypedIntExpr(&ast.IntExpr{Pos: pos(1, 10), Value: 1}),
+				ast.NewTypedIntExpr(&ast.IntExpr{Pos: pos(1, 15), Value: 2}),
+			),
 		},
 		{
 			name: "higher-order function",
 			input: &ast.AbsExpr{
+				Pos:   pos(1, 1),
 				Param: "f",
 				ParamType: &ast.FuncType{
 					From: &ast.BooleanType{},
 					To:   &ast.IntType{},
 				},
 				Body: &ast.AbsExpr{
+					Pos:       pos(2, 1),
 					Param:     "x",
 					ParamType: &ast.BooleanType{},
 					Body: &ast.AppExpr{
-						Func: &ast.VarExpr{Name: "f"},
-						Arg:  &ast.VarExpr{Name: "x"},
+						Pos:  pos(3, 1),
+						Func: &ast.VarExpr{Pos: pos(3, 1), Name: "f"},
+						Arg:  &ast.VarExpr{Pos: pos(3, 10), Name: "x"},
 					},
 				},
 			},
-			expectedType: &ast.FuncType{
-				From: &ast.FuncType{
+			expected: ast.NewTypedAbsExpr(
+				&ast.FuncType{
+					From: &ast.FuncType{
+						From: &ast.BooleanType{},
+						To:   &ast.IntType{},
+					},
+					To: &ast.FuncType{
+						From: &ast.BooleanType{},
+						To:   &ast.IntType{},
+					},
+				},
+				pos(1, 1),
+				"f",
+				&ast.FuncType{
 					From: &ast.BooleanType{},
 					To:   &ast.IntType{},
 				},
-				To: &ast.FuncType{
-					From: &ast.BooleanType{},
-					To:   &ast.IntType{},
-				},
-			},
+				ast.NewTypedAbsExpr(
+					&ast.FuncType{
+						From: &ast.BooleanType{},
+						To:   &ast.IntType{},
+					},
+					pos(2, 1),
+					"x",
+					&ast.BooleanType{},
+					ast.NewTypedAppExpr(
+						&ast.IntType{},
+						pos(3, 1),
+						ast.NewTypedVarExpr(
+							&ast.FuncType{
+								From: &ast.BooleanType{},
+								To:   &ast.IntType{},
+							},
+							&ast.VarExpr{Pos: pos(3, 1), Name: "f"},
+						),
+						ast.NewTypedVarExpr(
+							&ast.BooleanType{},
+							&ast.VarExpr{Pos: pos(3, 10), Name: "x"},
+						),
+					),
+				),
+			),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tc := NewTypeChecker()
-			typ, err := tc.Check(tt.input)
-
+			actual, err := tc.Check(tt.input)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
-			} else if typ.String() != tt.expectedType.String() {
-				t.Errorf("type mismatch: got %s, want %s", typ, tt.expectedType)
+				return
+			}
+
+			if tt.expected != nil {
+				if !compareTypedExprs(actual, tt.expected) {
+					t.Errorf("typed AST mismatch:\ngot:  %#v\nwant: %#v", actual, tt.expected)
+				}
 			}
 		})
 	}
@@ -304,5 +396,77 @@ func TestTypesEqual(t *testing.T) {
 				t.Errorf("typesEqual() = %v, want %v", got, tt.equal)
 			}
 		})
+	}
+}
+
+// compareTypedExprs compares two TypedExpr instances for deep equality
+func compareTypedExprs(actual, expected ast.TypedExpr) bool {
+	if actual == nil && expected == nil {
+		return true
+	}
+	if actual == nil || expected == nil {
+		return false
+	}
+
+	switch a := actual.(type) {
+	case *ast.TypedBoolExpr:
+		e, ok := expected.(*ast.TypedBoolExpr)
+		if !ok {
+			return false
+		}
+		return a.Value == e.Value && a.Pos == e.Pos
+
+	case *ast.TypedIntExpr:
+		e, ok := expected.(*ast.TypedIntExpr)
+		if !ok {
+			return false
+		}
+		return a.Value == e.Value && a.Pos == e.Pos
+
+	case *ast.TypedVarExpr:
+		e, ok := expected.(*ast.TypedVarExpr)
+		if !ok {
+			return false
+		}
+		return a.Name == e.Name && a.Pos == e.Pos && reflect.DeepEqual(a.Type(), e.Type())
+
+	case *ast.TypedAbsExpr:
+		e, ok := expected.(*ast.TypedAbsExpr)
+		if !ok {
+			return false
+		}
+		if a.Param != e.Param || a.Pos != e.Pos {
+			return false
+		}
+		if !reflect.DeepEqual(a.ParamType, e.ParamType) {
+			return false
+		}
+		return compareTypedExprs(a.Body, e.Body) && reflect.DeepEqual(a.Type(), e.Type())
+
+	case *ast.TypedAppExpr:
+		e, ok := expected.(*ast.TypedAppExpr)
+		if !ok {
+			return false
+		}
+		if a.Pos != e.Pos {
+			return false
+		}
+		return compareTypedExprs(a.Func, e.Func) && compareTypedExprs(a.Arg, e.Arg) && reflect.DeepEqual(a.Type(), e.Type())
+
+	case *ast.TypedIfExpr:
+		e, ok := expected.(*ast.TypedIfExpr)
+		if !ok {
+			return false
+		}
+		if a.Pos != e.Pos {
+			return false
+		}
+		return compareTypedExprs(a.Cond, e.Cond) &&
+			compareTypedExprs(a.Then, e.Then) &&
+			compareTypedExprs(a.Else, e.Else) &&
+			reflect.DeepEqual(a.Type(), e.Type())
+
+	default:
+		return false
 	}
 }

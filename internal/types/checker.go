@@ -38,13 +38,13 @@ func NewTypeChecker() *TypeChecker {
 	return &TypeChecker{}
 }
 
-// Check performs type checking on an expression and returns its type.
-func (tc *TypeChecker) Check(expr ast.Expr) (ast.Type, error) {
+// Check performs type checking and returns a typed AST.
+func (tc *TypeChecker) Check(expr ast.Expr) (ast.TypedExpr, error) {
 	root := &gamma{bindings: make(map[string]ast.Type)}
-	return tc.check(expr, root)
+	return tc.checkTyped(expr, root)
 }
 
-func (tc *TypeChecker) check(expr ast.Expr, g *gamma) (ast.Type, error) {
+func (tc *TypeChecker) checkTyped(expr ast.Expr, g *gamma) (ast.TypedExpr, error) {
 	switch e := expr.(type) {
 	case *ast.VarExpr:
 		return tc.checkVar(e, g)
@@ -53,9 +53,9 @@ func (tc *TypeChecker) check(expr ast.Expr, g *gamma) (ast.Type, error) {
 	case *ast.AppExpr:
 		return tc.checkApp(e, g)
 	case *ast.BoolExpr:
-		return &ast.BooleanType{}, nil
+		return ast.NewTypedBoolExpr(e), nil
 	case *ast.IntExpr:
-		return &ast.IntType{}, nil
+		return ast.NewTypedIntExpr(e), nil
 	case *ast.IfExpr:
 		return tc.checkIf(e, g)
 	default:
@@ -66,7 +66,7 @@ func (tc *TypeChecker) check(expr ast.Expr, g *gamma) (ast.Type, error) {
 	}
 }
 
-func (tc *TypeChecker) checkVar(expr *ast.VarExpr, g *gamma) (ast.Type, error) {
+func (tc *TypeChecker) checkVar(expr *ast.VarExpr, g *gamma) (ast.TypedExpr, error) {
 	typ, ok := g.lookup(expr.Name)
 	if !ok {
 		return nil, &UndefinedVariableError{
@@ -74,86 +74,88 @@ func (tc *TypeChecker) checkVar(expr *ast.VarExpr, g *gamma) (ast.Type, error) {
 			Name: expr.Name,
 		}
 	}
-	return typ, nil
+	return ast.NewTypedVarExpr(typ, expr), nil
 }
 
-func (tc *TypeChecker) checkAbs(expr *ast.AbsExpr, g *gamma) (ast.Type, error) {
+func (tc *TypeChecker) checkAbs(expr *ast.AbsExpr, g *gamma) (ast.TypedExpr, error) {
 	child := g.child()
 	child.bind(expr.Param, expr.ParamType)
 
-	bodyType, err := tc.check(expr.Body, child)
+	typedBody, err := tc.checkTyped(expr.Body, child)
 	if err != nil {
 		return nil, err
 	}
-	return &ast.FuncType{
+
+	funcType := &ast.FuncType{
 		From: expr.ParamType,
-		To:   bodyType,
-	}, nil
+		To:   typedBody.Type(),
+	}
+	return ast.NewTypedAbsExpr(funcType, expr.Pos, expr.Param, expr.ParamType, typedBody), nil
 }
 
-func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g *gamma) (ast.Type, error) {
-	funcType, err := tc.check(expr.Func, g)
+func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g *gamma) (ast.TypedExpr, error) {
+	typedFunc, err := tc.checkTyped(expr.Func, g)
 	if err != nil {
 		return nil, err
 	}
 
-	ft, ok := funcType.(*ast.FuncType)
+	ft, ok := typedFunc.Type().(*ast.FuncType)
 	if !ok {
 		return nil, &NotAFunctionError{
 			Pos:  expr.Pos,
-			Type: funcType,
+			Type: typedFunc.Type(),
 		}
 	}
 
-	argType, err := tc.check(expr.Arg, g)
+	typedArg, err := tc.checkTyped(expr.Arg, g)
 	if err != nil {
 		return nil, err
 	}
 
-	if !typesEqual(ft.From, argType) {
+	if !typesEqual(ft.From, typedArg.Type()) {
 		return nil, &TypeMismatchError{
 			Pos:      expr.Pos,
 			Expected: ft.From,
-			Actual:   argType,
+			Actual:   typedArg.Type(),
 			Context:  "application",
 		}
 	}
 
-	return ft.To, nil
+	return ast.NewTypedAppExpr(ft.To, expr.Pos, typedFunc, typedArg), nil
 }
 
-func (tc *TypeChecker) checkIf(expr *ast.IfExpr, g *gamma) (ast.Type, error) {
-	condType, err := tc.check(expr.Cond, g)
+func (tc *TypeChecker) checkIf(expr *ast.IfExpr, g *gamma) (ast.TypedExpr, error) {
+	typedCond, err := tc.checkTyped(expr.Cond, g)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, ok := condType.(*ast.BooleanType); !ok {
+	if _, ok := typedCond.Type().(*ast.BooleanType); !ok {
 		return nil, &InvalidConditionTypeError{
 			Pos:  expr.Pos,
-			Type: condType,
+			Type: typedCond.Type(),
 		}
 	}
 
-	thenType, err := tc.check(expr.Then, g)
+	typedThen, err := tc.checkTyped(expr.Then, g)
 	if err != nil {
 		return nil, err
 	}
 
-	elseType, err := tc.check(expr.Else, g)
+	typedElse, err := tc.checkTyped(expr.Else, g)
 	if err != nil {
 		return nil, err
 	}
 
-	if !typesEqual(thenType, elseType) {
+	if !typesEqual(typedThen.Type(), typedElse.Type()) {
 		return nil, &TypeMismatchError{
 			Pos:      expr.Pos,
-			Expected: thenType,
-			Actual:   elseType,
+			Expected: typedThen.Type(),
+			Actual:   typedElse.Type(),
 			Context:  "if-else branches",
 		}
 	}
-	return thenType, nil
+	return ast.NewTypedIfExpr(expr.Pos, typedCond, typedThen, typedElse), nil
 }
 
 func typesEqual(t1, t2 ast.Type) bool {
