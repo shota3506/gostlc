@@ -63,4 +63,10 @@ func (k TokenKind) String() string {
 type Token struct {
 	Kind  TokenKind
 	Value string
+	Pos   Position
+}
+
+type Position struct {
+	Line   int // 1 based line number
+	Column int // 1 based column number
 }

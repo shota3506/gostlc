@@ -1,45 +1,87 @@
 package lexer
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 )
+
+type LexerError struct {
+	message string
+	pos     Position
+	err     error
+}
+
+func (e *LexerError) Error() string {
+	if e.err != nil {
+		return fmt.Sprintf("%d:%d: %s: %v", e.pos.Line, e.pos.Column, e.message, e.err)
+	}
+	return fmt.Sprintf("%d:%d: %s", e.pos.Line, e.pos.Column, e.message)
+}
+
+func (e *LexerError) Pos() Position {
+	return e.pos
+}
+
+func (e *LexerError) Unwrap() error {
+	return e.err
+}
 
 type bufferedRuneReader struct {
 	r   io.RuneReader
 	buf *rune
+
+	line   int
+	colume int
 }
 
 func newBufferedRuneReader(r io.RuneReader) *bufferedRuneReader {
 	return &bufferedRuneReader{
 		r: r,
+
+		line:   1,
+		colume: 1,
 	}
 }
 
-func (r *bufferedRuneReader) Peek() (rune, int, error) {
+func (r *bufferedRuneReader) pos() Position {
+	return Position{Line: r.line, Column: r.colume}
+}
+
+func (r *bufferedRuneReader) Peek() (rune, Position, error) {
 	if r.buf != nil {
 		ru := *r.buf
-		return ru, utf8.RuneLen(ru), nil
+		return ru, r.pos(), nil
 	}
-	ru, size, err := r.r.ReadRune()
+	ru, _, err := r.r.ReadRune()
 	if err != nil {
-		return 0, 0, err
+		return 0, r.pos(), err
 	}
 	r.buf = &ru
-	return ru, size, nil
+	return ru, r.pos(), nil
 }
 
-func (r *bufferedRuneReader) ReadRune() (rune, int, error) {
+func (r *bufferedRuneReader) Read() (ru rune, pos Position, err error) {
+	defer func() {
+		if err == nil {
+			if ru == '\n' {
+				r.line++
+				r.colume = 1
+			} else {
+				r.colume++
+			}
+		}
+	}()
+
 	if r.buf != nil {
-		ru := *r.buf
+		ru = *r.buf
 		r.buf = nil
-		return ru, utf8.RuneLen(ru), nil
+		return ru, r.pos(), nil
 	}
-	return r.r.ReadRune()
+	ru, _, err = r.r.ReadRune()
+	return ru, r.pos(), err
 }
 
 // Lexer is a lexical analyzer for the lambda calculus with simple types.
@@ -56,43 +98,62 @@ func New(s string) *Lexer {
 func (l *Lexer) Next() (Token, error) {
 	l.skipWhitespace()
 
-	ch, _, err := l.reader.ReadRune()
+	ch, pos, err := l.reader.Read()
 	if err != nil {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return Token{
 				Kind: TokenKindEOF,
+				Pos:  l.reader.pos(),
 			}, nil
 		}
-		return Token{}, err
+		return Token{}, &LexerError{
+			message: "read character",
+			pos:     pos,
+			err:     err,
+		}
 	}
 
 	switch ch {
 	case '\\':
-		return Token{Kind: TokenKindLambda, Value: string(ch)}, nil
+		return Token{Kind: TokenKindLambda, Value: string(ch), Pos: pos}, nil
 	case '.':
-		return Token{Kind: TokenKindDot, Value: string(ch)}, nil
+		return Token{Kind: TokenKindDot, Value: string(ch), Pos: pos}, nil
 	case ':':
-		return Token{Kind: TokenKindColon, Value: string(ch)}, nil
+		return Token{Kind: TokenKindColon, Value: string(ch), Pos: pos}, nil
 	case '(':
-		return Token{Kind: TokenKindLParen, Value: string(ch)}, nil
+		return Token{Kind: TokenKindLParen, Value: string(ch), Pos: pos}, nil
 	case ')':
-		return Token{Kind: TokenKindRParen, Value: string(ch)}, nil
+		return Token{Kind: TokenKindRParen, Value: string(ch), Pos: pos}, nil
 	case '-':
-		nextCh, _, err := l.reader.Peek()
+		nextCh, nextPos, err := l.reader.Peek()
 		if err != nil {
-			return Token{}, err
+			if errors.Is(err, io.EOF) {
+				return Token{}, &LexerError{
+					message: "unexpected eof after '-'",
+					pos:     nextPos,
+				}
+			}
+			return Token{}, &LexerError{
+				message: "read character",
+				pos:     nextPos,
+				err:     err,
+			}
 		}
 		if nextCh == '>' {
-			_, _, _ = l.reader.ReadRune()
-			return Token{Kind: TokenKindArrow, Value: "->"}, nil
+			_, _, _ = l.reader.Read()
+			return Token{Kind: TokenKindArrow, Value: "->", Pos: pos}, nil
 		}
-		return Token{}, fmt.Errorf("unexpected character after '-': %q", nextCh)
+		return Token{}, &LexerError{
+			message: fmt.Sprintf("unexpected character after '-': %q", nextCh),
+			pos:     nextPos,
+		}
 	}
 
-	if unicode.IsDigit(ch) {
+	if isDigit(ch) {
 		return Token{
 			Kind:  TokenKindInt,
 			Value: l.readInteger(ch),
+			Pos:   pos,
 		}, nil
 	}
 
@@ -100,28 +161,32 @@ func (l *Lexer) Next() (Token, error) {
 		ident := l.readIdentifier(ch)
 		switch ident {
 		case "true":
-			return Token{Kind: TokenKindTrue, Value: ident}, nil
+			return Token{Kind: TokenKindTrue, Value: ident, Pos: pos}, nil
 		case "false":
-			return Token{Kind: TokenKindFalse, Value: ident}, nil
+			return Token{Kind: TokenKindFalse, Value: ident, Pos: pos}, nil
 		case "if":
-			return Token{Kind: TokenKindIf, Value: ident}, nil
+			return Token{Kind: TokenKindIf, Value: ident, Pos: pos}, nil
 		case "then":
-			return Token{Kind: TokenKindThen, Value: ident}, nil
+			return Token{Kind: TokenKindThen, Value: ident, Pos: pos}, nil
 		case "else":
-			return Token{Kind: TokenKindElse, Value: ident}, nil
+			return Token{Kind: TokenKindElse, Value: ident, Pos: pos}, nil
 		case "Bool":
-			return Token{Kind: TokenKindBoolType, Value: ident}, nil
+			return Token{Kind: TokenKindBoolType, Value: ident, Pos: pos}, nil
 		case "Int":
-			return Token{Kind: TokenKindIntType, Value: ident}, nil
+			return Token{Kind: TokenKindIntType, Value: ident, Pos: pos}, nil
 		default:
 			return Token{
 				Kind:  TokenKindIdent,
 				Value: ident,
+				Pos:   pos,
 			}, nil
 		}
 	}
 
-	return Token{}, fmt.Errorf("unexpected character: %q", ch)
+	return Token{}, &LexerError{
+		message: fmt.Sprintf("unexpected character: %q", ch),
+		pos:     pos,
+	}
 }
 
 func (l *Lexer) skipWhitespace() {
@@ -136,7 +201,7 @@ func (l *Lexer) skipWhitespace() {
 		if ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' {
 			return
 		}
-		_, _, _ = l.reader.ReadRune() // ignore error because we already peeked
+		_, _, _ = l.reader.Read() // ignore error because we already peeked
 	}
 }
 
@@ -148,11 +213,11 @@ func (l *Lexer) readInteger(ch rune) string {
 		if err != nil {
 			break
 		}
-		if !unicode.IsDigit(next) {
+		if !isDigit(next) {
 			break
 		}
 		b.WriteRune(next)
-		_, _, _ = l.reader.ReadRune() // ignore error because we already peeked
+		_, _, _ = l.reader.Read() // ignore error because we already peeked
 	}
 
 	return b.String()
@@ -170,10 +235,14 @@ func (l *Lexer) readIdentifier(ch rune) string {
 			break
 		}
 		b.WriteRune(next)
-		_, _, _ = l.reader.ReadRune() // ignore error because we already peeked
+		_, _, _ = l.reader.Read() // ignore error because we already peeked
 	}
 
 	return b.String()
+}
+
+func isDigit(ch rune) bool {
+	return '0' <= ch && ch <= '9'
 }
 
 func isAlphabetOrUnderscore(ch rune) bool {
