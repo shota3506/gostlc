@@ -5,6 +5,7 @@ import (
 
 	"github.com/shota3506/gostlc/internal/parser"
 	"github.com/shota3506/gostlc/internal/types"
+	"github.com/shota3506/gostlc/internal/values"
 )
 
 func TestEvalIntegerExpressions(t *testing.T) {
@@ -34,7 +35,7 @@ func TestEvalIntegerExpressions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			val := eval(t, tt.input)
 
-			intVal, ok := val.(*IntValue)
+			intVal, ok := val.(*values.IntValue)
 			if !ok {
 				t.Fatalf("expected IntValue, got %T", val)
 			}
@@ -70,7 +71,7 @@ func TestEvalBooleanExpressions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			val := eval(t, tt.input)
 
-			boolVal, ok := val.(*BoolValue)
+			boolVal, ok := val.(*values.BoolValue)
 			if !ok {
 				t.Fatalf("expected BoolValue, got %T", val)
 			}
@@ -99,7 +100,7 @@ func TestEvalClosures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			val := eval(t, tt.input)
 
-			closure, ok := val.(*Closure)
+			closure, ok := val.(*values.Closure)
 			if !ok {
 				t.Fatalf("expected Closure, got %T", val)
 			}
@@ -112,7 +113,7 @@ func TestEvalClosures(t *testing.T) {
 	}
 }
 
-func eval(t *testing.T, input string) Value {
+func eval(t *testing.T, input string) values.Value {
 	t.Helper()
 
 	expr, err := parser.Parse(input)

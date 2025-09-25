@@ -12,6 +12,7 @@ import (
 	"github.com/shota3506/gostlc/internal/eval"
 	"github.com/shota3506/gostlc/internal/parser"
 	"github.com/shota3506/gostlc/internal/types"
+	"github.com/shota3506/gostlc/internal/values"
 )
 
 var (
@@ -78,7 +79,7 @@ func isInteractive() bool {
 	return (fi.Mode() & os.ModeCharDevice) != 0
 }
 
-func evaluate(code string) (eval.Value, error) {
+func evaluate(code string) (values.Value, error) {
 	expr, err := parser.Parse(code)
 	if err != nil {
 		return nil, err

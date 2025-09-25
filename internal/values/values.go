@@ -1,4 +1,4 @@
-package eval
+package values
 
 import (
 	"fmt"
@@ -37,7 +37,7 @@ type Closure struct {
 	Param     string
 	ParamType ast.Type
 	Body      ast.TypedExpr
-	Rho       rho
+	Env       Rho
 }
 
 func (c *Closure) value() {}

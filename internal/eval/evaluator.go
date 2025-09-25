@@ -4,100 +4,70 @@ import (
 	"fmt"
 
 	"github.com/shota3506/gostlc/internal/ast"
+	"github.com/shota3506/gostlc/internal/values"
 )
 
-type rho struct {
-	name   string
-	value  Value
-	parent *rho
-}
-
-func newRho() rho {
-	return rho{}
-}
-
-func (r rho) lookup(name string) (Value, bool) {
-	if name == "" {
-		return nil, false
-	}
-	if r.name == name {
-		return r.value, true
-	}
-	if r.parent != nil {
-		return r.parent.lookup(name)
-	}
-	return nil, false
-}
-
-func (r rho) bind(name string, value Value) rho {
-	return rho{
-		name:   name,
-		value:  value,
-		parent: &r,
-	}
-}
-
-func Eval(expr ast.TypedExpr) (Value, error) {
-	root := newRho()
+func Eval(expr ast.TypedExpr) (values.Value, error) {
+	root := values.NewRho()
 	return evalExpr(expr, root)
 }
 
-func evalExpr(expr ast.TypedExpr, rho rho) (Value, error) {
+func evalExpr(expr ast.TypedExpr, env values.Rho) (values.Value, error) {
 	switch e := expr.(type) {
 	case *ast.TypedIntExpr:
-		return &IntValue{Value: e.Value}, nil
+		return &values.IntValue{Value: e.Value}, nil
 
 	case *ast.TypedBoolExpr:
-		return &BoolValue{Value: e.Value}, nil
+		return &values.BoolValue{Value: e.Value}, nil
 
 	case *ast.TypedVarExpr:
-		val, ok := rho.lookup(e.Name)
+		val, ok := env.Lookup(e.Name)
 		if !ok {
 			return nil, fmt.Errorf("undefined variable: %s at line %d, col %d", e.Name, e.Pos.Line, e.Pos.Column)
 		}
 		return val, nil
 
 	case *ast.TypedAbsExpr:
-		return &Closure{
+		return &values.Closure{
 			Param:     e.Param,
 			ParamType: e.ParamType,
 			Body:      e.Body,
-			Rho:       rho,
+			Env:       env,
 		}, nil
 
 	case *ast.TypedAppExpr:
-		fnVal, err := evalExpr(e.Func, rho)
+		fnVal, err := evalExpr(e.Func, env)
 		if err != nil {
 			return nil, err
 		}
 
-		argVal, err := evalExpr(e.Arg, rho)
+		argVal, err := evalExpr(e.Arg, env)
 		if err != nil {
 			return nil, err
 		}
 
 		switch fn := fnVal.(type) {
-		case *Closure:
-			return evalExpr(fn.Body, fn.Rho.bind(fn.Param, argVal))
+		case *values.Closure:
+			return evalExpr(fn.Body, fn.Env.Bind(fn.Param, argVal))
 		default:
 			return nil, fmt.Errorf("expected function value at line %d, col %d", e.Pos.Line, e.Pos.Column)
 		}
 
 	case *ast.TypedIfExpr:
-		condVal, err := evalExpr(e.Cond, rho)
+		condVal, err := evalExpr(e.Cond, env)
 		if err != nil {
 			return nil, err
 		}
 
-		boolVal, ok := condVal.(*BoolValue)
+		boolVal, ok := condVal.(*values.BoolValue)
 		if !ok {
 			return nil, fmt.Errorf("expected boolean value in if condition at line %d, col %d", e.Pos.Line, e.Pos.Column)
 		}
 
 		if boolVal.Value {
-			return evalExpr(e.Then, rho)
+			return evalExpr(e.Then, env)
 		}
-		return evalExpr(e.Else, rho)
+		return evalExpr(e.Else, env)
 
 	default:
 		return nil, fmt.Errorf("unsupported expression type: %T", expr)
