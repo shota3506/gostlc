@@ -36,5 +36,5 @@ type FuncType struct {
 func (FuncType) typeNode() {}
 
 func (f FuncType) String() string {
-	return fmt.Sprintf("(%s -> %s)", f.From, f.To)
+	return fmt.Sprintf("(%s->%s)", f.From, f.To)
 }

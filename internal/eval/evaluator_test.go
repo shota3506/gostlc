@@ -29,6 +29,17 @@ func TestEvalIntegerExpressions(t *testing.T) {
 		{"complex nesting swap", "(\\f:Int->Int->Int.\\x:Int.\\y:Int.f x y) (\\a:Int.\\b:Int.b) 10 20", 20},
 		{"application chain", "(\\x:Int.\\y:Int.\\z:Int.z) 1 2 3", 3},
 		{"function composition", "(\\f:Int->Int.\\g:Int->Int.\\x:Int.f (g x)) (\\a:Int.a) (\\b:Int.b) 42", 42},
+		{"builtin add simple", "add 1 2", 3},
+		{"builtin add with zero", "add 0 5", 5},
+		{"builtin add negative", "add 10 -3", 7},
+		{"builtin add partial application", "(add 5) 3", 8},
+		{"builtin add in lambda", "(\\inc:Int->Int. inc 10) (add 1)", 11},
+		{"builtin sub simple", "sub 5 3", 2},
+		{"builtin sub zero result", "sub 7 7", 0},
+		{"builtin sub negative result", "sub 3 10", -7},
+		{"builtin sub partial application", "(sub 10) 4", 6},
+		{"builtin sub in lambda", "(\\f:Int->Int. f 3) (sub 10)", 7},
+		{"builtin sub with add", "sub (add 10 5) 7", 8},
 	}
 
 	for _, tt := range tests {
@@ -90,10 +101,10 @@ func TestEvalClosures(t *testing.T) {
 		expectedParam  string
 		expectedString string
 	}{
-		{"simple lambda", "\\x:Int.x", "x", "<λx:Int.Int>"},
-		{"lambda with bool param", "\\b:Bool.b", "b", "<λb:Bool.Bool>"},
-		{"nested lambda outer", "\\x:Int.\\y:Int.x", "x", "<λx:Int.(Int -> Int)>"},
-		{"higher order function", "\\f:Int->Int.f", "f", "<λf:(Int -> Int).(Int -> Int)>"},
+		{"simple lambda", "\\x:Int.x", "x", "<closure:Int->Int>"},
+		{"lambda with bool param", "\\b:Bool.b", "b", "<closure:Bool->Bool>"},
+		{"nested lambda outer", "\\x:Int.\\y:Int.x", "x", "<closure:Int->(Int->Int)>"},
+		{"higher order function", "\\f:Int->Int.f", "f", "<closure:(Int->Int)->(Int->Int)>"},
 	}
 
 	for _, tt := range tests {

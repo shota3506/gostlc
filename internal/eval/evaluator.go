@@ -4,11 +4,15 @@ import (
 	"fmt"
 
 	"github.com/shota3506/gostlc/internal/ast"
+	"github.com/shota3506/gostlc/internal/builtin"
 	"github.com/shota3506/gostlc/internal/values"
 )
 
 func Eval(expr ast.TypedExpr) (values.Value, error) {
 	root := values.NewRho()
+	for ident, val := range builtin.Functions {
+		root = root.Bind(ident, val)
+	}
 	return evalExpr(expr, root)
 }
 
@@ -49,6 +53,10 @@ func evalExpr(expr ast.TypedExpr, env values.Rho) (values.Value, error) {
 		switch fn := fnVal.(type) {
 		case *values.Closure:
 			return evalExpr(fn.Body, fn.Env.Bind(fn.Param, argVal))
+		case *values.BuiltinFunc:
+			return fn.Fn(argVal)
+		case *values.PartialBuiltinFunc:
+			return fn.Fn(argVal)
 		default:
 			return nil, fmt.Errorf("expected function value at line %d, col %d", e.Pos.Line, e.Pos.Column)
 		}

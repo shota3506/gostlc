@@ -42,5 +42,29 @@ type Closure struct {
 
 func (c *Closure) value() {}
 func (c *Closure) String() string {
-	return fmt.Sprintf("<λ%s:%s.%s>", c.Param, c.ParamType, c.Body.Type())
+	return fmt.Sprintf("<closure:%s->%s>", c.ParamType, c.Body.Type())
+}
+
+type BuiltinFunc struct {
+	Name       string
+	ParamType  ast.Type
+	ReturnType ast.Type
+	Fn         func(args Value) (Value, error)
+}
+
+func (b *BuiltinFunc) value() {}
+func (b *BuiltinFunc) String() string {
+	return fmt.Sprintf("<builtin:%s:%s->%s>", b.Name, b.ParamType, b.ReturnType)
+}
+
+type PartialBuiltinFunc struct {
+	Name       string // 元の関数名を保持
+	ParamType  ast.Type
+	ReturnType ast.Type
+	Fn         func(args Value) (Value, error)
+}
+
+func (p *PartialBuiltinFunc) value() {}
+func (p *PartialBuiltinFunc) String() string {
+	return fmt.Sprintf("<builtin:%s[partial]:%s->%s>", p.Name, p.ParamType, p.ReturnType)
 }

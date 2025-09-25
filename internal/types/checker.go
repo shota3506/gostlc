@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/shota3506/gostlc/internal/ast"
+	"github.com/shota3506/gostlc/internal/builtin"
 )
 
 // gamma represents the type environment for variable bindings.
@@ -39,6 +40,9 @@ func (g gamma) lookup(name string) (ast.Type, bool) {
 // Check performs type checking and returns a typed AST.
 func Check(expr ast.Expr) (ast.TypedExpr, error) {
 	root := newGamma()
+	for ident, typ := range builtin.FunctionTypes {
+		root = root.bind(ident, typ)
+	}
 	return checkTyped(expr, root)
 }
 

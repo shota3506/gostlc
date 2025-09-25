@@ -13,6 +13,7 @@ This is a toy interpreter for self learning purposes.
 - Type system: Static type checking with Int and Bool base types, plus function types
 - Conditional expressions: if-then-else constructs with type checking
 - Literals: Integer and boolean literal support
+- Builtin functions: Arithmetic operations (add, sub) with currying support
 
 ### Language Features
 
@@ -41,6 +42,12 @@ type ::= "Bool"                            (* boolean type *)
 
 var  ::= letter (letter | digit)*          (* variable names *)
 ```
+
+#### Builtin Functions
+
+- `add : Int -> Int -> Int` - Addition
+- `sub : Int -> Int -> Int` - Subtraction
+
 
 ## Installation
 
@@ -117,6 +124,24 @@ if (\x:Bool. x) true then 100 else 200
 # Result: 10
 ```
 
+### Arithmetic with Builtin Functions
+```stlc
+# Simple arithmetic
+add 2 3
+# Result: 5
+
+sub 10 4
+# Result: 6
+
+# Partial application
+(\inc:Int->Int. inc 10) (add 1)
+# Result: 11
+
+# Composition with builtins
+add (sub 10 3) 5
+# Result: 12
+```
+
 ## TODOs
 
 - Let bindings: `let x = e1 in e2` for local variable binding
@@ -125,7 +150,7 @@ if (\x:Bool. x) true then 100 else 200
 - Sum types: Either/variant types with pattern matching
 - Unit type: `()` for side-effect operations
 - Type inference: Hindley-Milner style type inference to reduce type annotations
-- Arithmetic operators: add, sub, mul, div, mod
+- Arithmetic operators: mul, div, mod (add and sub are already implemented)
 - Comparison operators: eq, ne, lt, le, gt, ge
 - Boolean operators: and, or, not
 - String type and operations: String literals and concatenation

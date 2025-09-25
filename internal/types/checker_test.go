@@ -14,10 +14,9 @@ func pos(line, col int) token.Position {
 
 func TestTypeChecker(t *testing.T) {
 	tests := []struct {
-		name           string
-		input          ast.Expr
-		checkStructure func(t *testing.T, typed ast.TypedExpr)
-		expected       ast.TypedExpr
+		name     string
+		input    ast.Expr
+		expected ast.TypedExpr
 	}{
 		{
 			name:     "boolean literal",
@@ -28,6 +27,130 @@ func TestTypeChecker(t *testing.T) {
 			name:     "integer literal",
 			input:    &ast.IntExpr{Pos: pos(1, 1), Value: 42},
 			expected: ast.NewTypedIntExpr(&ast.IntExpr{Pos: pos(1, 1), Value: 42}),
+		},
+		{
+			name:  "builtin add function",
+			input: &ast.VarExpr{Pos: pos(1, 1), Name: "add"},
+			expected: ast.NewTypedVarExpr(
+				&ast.FuncType{
+					From: &ast.IntType{},
+					To: &ast.FuncType{
+						From: &ast.IntType{},
+						To:   &ast.IntType{},
+					},
+				},
+				&ast.VarExpr{Pos: pos(1, 1), Name: "add"},
+			),
+		},
+		{
+			name:  "builtin sub function",
+			input: &ast.VarExpr{Pos: pos(1, 1), Name: "sub"},
+			expected: ast.NewTypedVarExpr(
+				&ast.FuncType{
+					From: &ast.IntType{},
+					To: &ast.FuncType{
+						From: &ast.IntType{},
+						To:   &ast.IntType{},
+					},
+				},
+				&ast.VarExpr{Pos: pos(1, 1), Name: "sub"},
+			),
+		},
+		{
+			name: "builtin add with one argument",
+			input: &ast.AppExpr{
+				Pos:  pos(1, 1),
+				Func: &ast.VarExpr{Pos: pos(1, 1), Name: "add"},
+				Arg:  &ast.IntExpr{Pos: pos(1, 5), Value: 1},
+			},
+			expected: ast.NewTypedAppExpr(
+				&ast.FuncType{
+					From: &ast.IntType{},
+					To:   &ast.IntType{},
+				},
+				pos(1, 1),
+				ast.NewTypedVarExpr(
+					&ast.FuncType{
+						From: &ast.IntType{},
+						To: &ast.FuncType{
+							From: &ast.IntType{},
+							To:   &ast.IntType{},
+						},
+					},
+					&ast.VarExpr{Pos: pos(1, 1), Name: "add"},
+				),
+				ast.NewTypedIntExpr(&ast.IntExpr{Pos: pos(1, 5), Value: 1}),
+			),
+		},
+		{
+			name: "builtin add with two arguments",
+			input: &ast.AppExpr{
+				Pos: pos(1, 1),
+				Func: &ast.AppExpr{
+					Pos:  pos(1, 1),
+					Func: &ast.VarExpr{Pos: pos(1, 1), Name: "add"},
+					Arg:  &ast.IntExpr{Pos: pos(1, 5), Value: 1},
+				},
+				Arg: &ast.IntExpr{Pos: pos(1, 7), Value: 2},
+			},
+			expected: ast.NewTypedAppExpr(
+				&ast.IntType{},
+				pos(1, 1),
+				ast.NewTypedAppExpr(
+					&ast.FuncType{
+						From: &ast.IntType{},
+						To:   &ast.IntType{},
+					},
+					pos(1, 1),
+					ast.NewTypedVarExpr(
+						&ast.FuncType{
+							From: &ast.IntType{},
+							To: &ast.FuncType{
+								From: &ast.IntType{},
+								To:   &ast.IntType{},
+							},
+						},
+						&ast.VarExpr{Pos: pos(1, 1), Name: "add"},
+					),
+					ast.NewTypedIntExpr(&ast.IntExpr{Pos: pos(1, 5), Value: 1}),
+				),
+				ast.NewTypedIntExpr(&ast.IntExpr{Pos: pos(1, 7), Value: 2}),
+			),
+		},
+		{
+			name: "builtin sub with two arguments",
+			input: &ast.AppExpr{
+				Pos: pos(1, 1),
+				Func: &ast.AppExpr{
+					Pos:  pos(1, 1),
+					Func: &ast.VarExpr{Pos: pos(1, 1), Name: "sub"},
+					Arg:  &ast.IntExpr{Pos: pos(1, 5), Value: 10},
+				},
+				Arg: &ast.IntExpr{Pos: pos(1, 8), Value: 3},
+			},
+			expected: ast.NewTypedAppExpr(
+				&ast.IntType{},
+				pos(1, 1),
+				ast.NewTypedAppExpr(
+					&ast.FuncType{
+						From: &ast.IntType{},
+						To:   &ast.IntType{},
+					},
+					pos(1, 1),
+					ast.NewTypedVarExpr(
+						&ast.FuncType{
+							From: &ast.IntType{},
+							To: &ast.FuncType{
+								From: &ast.IntType{},
+								To:   &ast.IntType{},
+							},
+						},
+						&ast.VarExpr{Pos: pos(1, 1), Name: "sub"},
+					),
+					ast.NewTypedIntExpr(&ast.IntExpr{Pos: pos(1, 5), Value: 10}),
+				),
+				ast.NewTypedIntExpr(&ast.IntExpr{Pos: pos(1, 8), Value: 3}),
+			),
 		},
 		{
 			name: "identity function",
@@ -215,10 +338,8 @@ func TestTypeChecker(t *testing.T) {
 				return
 			}
 
-			if tt.expected != nil {
-				if !compareTypedExprs(actual, tt.expected) {
-					t.Errorf("typed AST mismatch:\ngot:  %#v\nwant: %#v", actual, tt.expected)
-				}
+			if !compareTypedExprs(actual, tt.expected) {
+				t.Errorf("typed AST mismatch:\ngot:  %#v\nwant: %#v", actual, tt.expected)
 			}
 		})
 	}
