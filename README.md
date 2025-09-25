@@ -1,5 +1,7 @@
 # gostlc - Simply Typed Lambda Calculus Interpreter
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/shota3506/gostlc)](https://goreportcard.com/report/github.com/shota3506/gostlc)
+
 Go implemetation of Simple Typed Lambda Calculus (STLC) with base types - with zero external dependencies.
 
 This is a toy interpreter for self learning purposes.
