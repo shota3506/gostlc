@@ -36,33 +36,26 @@ func (g gamma) lookup(name string) (ast.Type, bool) {
 	return nil, false
 }
 
-// TypeChecker provides type checking functionality for expressions.
-type TypeChecker struct{}
-
-func NewTypeChecker() *TypeChecker {
-	return &TypeChecker{}
-}
-
 // Check performs type checking and returns a typed AST.
-func (tc *TypeChecker) Check(expr ast.Expr) (ast.TypedExpr, error) {
+func Check(expr ast.Expr) (ast.TypedExpr, error) {
 	root := newGamma()
-	return tc.checkTyped(expr, root)
+	return checkTyped(expr, root)
 }
 
-func (tc *TypeChecker) checkTyped(expr ast.Expr, g gamma) (ast.TypedExpr, error) {
+func checkTyped(expr ast.Expr, g gamma) (ast.TypedExpr, error) {
 	switch e := expr.(type) {
 	case *ast.VarExpr:
-		return tc.checkVar(e, g)
+		return checkVar(e, g)
 	case *ast.AbsExpr:
-		return tc.checkAbs(e, g)
+		return checkAbs(e, g)
 	case *ast.AppExpr:
-		return tc.checkApp(e, g)
+		return checkApp(e, g)
 	case *ast.BoolExpr:
 		return ast.NewTypedBoolExpr(e), nil
 	case *ast.IntExpr:
 		return ast.NewTypedIntExpr(e), nil
 	case *ast.IfExpr:
-		return tc.checkIf(e, g)
+		return checkIf(e, g)
 	default:
 		return nil, &UnknownExprTypeError{
 			Pos:  expr.Position(),
@@ -71,7 +64,7 @@ func (tc *TypeChecker) checkTyped(expr ast.Expr, g gamma) (ast.TypedExpr, error)
 	}
 }
 
-func (tc *TypeChecker) checkVar(expr *ast.VarExpr, g gamma) (ast.TypedExpr, error) {
+func checkVar(expr *ast.VarExpr, g gamma) (ast.TypedExpr, error) {
 	typ, ok := g.lookup(expr.Name)
 	if !ok {
 		return nil, &UndefinedVariableError{
@@ -82,8 +75,8 @@ func (tc *TypeChecker) checkVar(expr *ast.VarExpr, g gamma) (ast.TypedExpr, erro
 	return ast.NewTypedVarExpr(typ, expr), nil
 }
 
-func (tc *TypeChecker) checkAbs(expr *ast.AbsExpr, g gamma) (ast.TypedExpr, error) {
-	typedBody, err := tc.checkTyped(expr.Body, g.bind(expr.Param, expr.ParamType))
+func checkAbs(expr *ast.AbsExpr, g gamma) (ast.TypedExpr, error) {
+	typedBody, err := checkTyped(expr.Body, g.bind(expr.Param, expr.ParamType))
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +88,8 @@ func (tc *TypeChecker) checkAbs(expr *ast.AbsExpr, g gamma) (ast.TypedExpr, erro
 	return ast.NewTypedAbsExpr(funcType, expr.Pos, expr.Param, expr.ParamType, typedBody), nil
 }
 
-func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g gamma) (ast.TypedExpr, error) {
-	typedFunc, err := tc.checkTyped(expr.Func, g)
+func checkApp(expr *ast.AppExpr, g gamma) (ast.TypedExpr, error) {
+	typedFunc, err := checkTyped(expr.Func, g)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +102,7 @@ func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g gamma) (ast.TypedExpr, erro
 		}
 	}
 
-	typedArg, err := tc.checkTyped(expr.Arg, g)
+	typedArg, err := checkTyped(expr.Arg, g)
 	if err != nil {
 		return nil, err
 	}
@@ -126,8 +119,8 @@ func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g gamma) (ast.TypedExpr, erro
 	return ast.NewTypedAppExpr(ft.To, expr.Pos, typedFunc, typedArg), nil
 }
 
-func (tc *TypeChecker) checkIf(expr *ast.IfExpr, g gamma) (ast.TypedExpr, error) {
-	typedCond, err := tc.checkTyped(expr.Cond, g)
+func checkIf(expr *ast.IfExpr, g gamma) (ast.TypedExpr, error) {
+	typedCond, err := checkTyped(expr.Cond, g)
 	if err != nil {
 		return nil, err
 	}
@@ -139,12 +132,12 @@ func (tc *TypeChecker) checkIf(expr *ast.IfExpr, g gamma) (ast.TypedExpr, error)
 		}
 	}
 
-	typedThen, err := tc.checkTyped(expr.Then, g)
+	typedThen, err := checkTyped(expr.Then, g)
 	if err != nil {
 		return nil, err
 	}
 
-	typedElse, err := tc.checkTyped(expr.Else, g)
+	typedElse, err := checkTyped(expr.Else, g)
 	if err != nil {
 		return nil, err
 	}

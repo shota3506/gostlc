@@ -120,14 +120,12 @@ func eval(t *testing.T, input string) Value {
 		t.Fatalf("parser error: %v", err)
 	}
 
-	checker := types.NewTypeChecker()
-	typedExpr, err := checker.Check(expr)
+	typedExpr, err := types.Check(expr)
 	if err != nil {
 		t.Fatalf("type checker error: %v", err)
 	}
 
-	evaluator := NewEvaluator()
-	val, err := evaluator.Eval(typedExpr)
+	val, err := Eval(typedExpr)
 	if err != nil {
 		t.Fatalf("evaluator error: %v", err)
 	}

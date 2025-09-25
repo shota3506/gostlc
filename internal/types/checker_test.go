@@ -209,8 +209,7 @@ func TestTypeChecker(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tc := NewTypeChecker()
-			actual, err := tc.Check(tt.input)
+			actual, err := Check(tt.input)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
@@ -296,8 +295,7 @@ func TestTypeCheckerErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tc := NewTypeChecker()
-			_, err := tc.Check(tt.input)
+			_, err := Check(tt.input)
 
 			if err == nil {
 				t.Errorf("expected error, but got nil")

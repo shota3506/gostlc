@@ -37,19 +37,12 @@ func (r rho) bind(name string, value Value) rho {
 	}
 }
 
-type Evaluator struct {
-}
-
-func NewEvaluator() *Evaluator {
-	return &Evaluator{}
-}
-
-func (ev *Evaluator) Eval(expr ast.TypedExpr) (Value, error) {
+func Eval(expr ast.TypedExpr) (Value, error) {
 	root := newRho()
-	return ev.evalExpr(expr, root)
+	return evalExpr(expr, root)
 }
 
-func (ev *Evaluator) evalExpr(expr ast.TypedExpr, rho rho) (Value, error) {
+func evalExpr(expr ast.TypedExpr, rho rho) (Value, error) {
 	switch e := expr.(type) {
 	case *ast.TypedIntExpr:
 		return &IntValue{Value: e.Value}, nil
@@ -73,25 +66,25 @@ func (ev *Evaluator) evalExpr(expr ast.TypedExpr, rho rho) (Value, error) {
 		}, nil
 
 	case *ast.TypedAppExpr:
-		fnVal, err := ev.evalExpr(e.Func, rho)
+		fnVal, err := evalExpr(e.Func, rho)
 		if err != nil {
 			return nil, err
 		}
 
-		argVal, err := ev.evalExpr(e.Arg, rho)
+		argVal, err := evalExpr(e.Arg, rho)
 		if err != nil {
 			return nil, err
 		}
 
 		switch fn := fnVal.(type) {
 		case *Closure:
-			return ev.evalExpr(fn.Body, fn.Rho.bind(fn.Param, argVal))
+			return evalExpr(fn.Body, fn.Rho.bind(fn.Param, argVal))
 		default:
 			return nil, fmt.Errorf("expected function value at line %d, col %d", e.Pos.Line, e.Pos.Column)
 		}
 
 	case *ast.TypedIfExpr:
-		condVal, err := ev.evalExpr(e.Cond, rho)
+		condVal, err := evalExpr(e.Cond, rho)
 		if err != nil {
 			return nil, err
 		}
@@ -102,9 +95,9 @@ func (ev *Evaluator) evalExpr(expr ast.TypedExpr, rho rho) (Value, error) {
 		}
 
 		if boolVal.Value {
-			return ev.evalExpr(e.Then, rho)
+			return evalExpr(e.Then, rho)
 		}
-		return ev.evalExpr(e.Else, rho)
+		return evalExpr(e.Else, rho)
 
 	default:
 		return nil, fmt.Errorf("unsupported expression type: %T", expr)
