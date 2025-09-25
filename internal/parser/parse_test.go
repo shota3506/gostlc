@@ -57,13 +57,13 @@ func TestParser(t *testing.T) {
 			},
 		},
 		{
-			name:  "Boolean literals true",
-			input: `true`,
+			name:     "Boolean literals true",
+			input:    `true`,
 			expected: &ast.BoolExpr{Value: true},
 		},
 		{
-			name:  "Boolean literals false",
-			input: `false`,
+			name:     "Boolean literals false",
+			input:    `false`,
 			expected: &ast.BoolExpr{Value: false},
 		},
 		{
@@ -145,8 +145,8 @@ func TestParser(t *testing.T) {
 			},
 		},
 		{
-			name:  "Simple integer literal",
-			input: `42`,
+			name:     "Simple integer literal",
+			input:    `42`,
 			expected: &ast.IntExpr{Value: 42},
 		},
 	} {

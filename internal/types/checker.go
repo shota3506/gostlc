@@ -6,24 +6,29 @@ import (
 
 // gamma represents the type environment for variable bindings.
 type gamma struct {
-	bindings map[string]ast.Type
-	parent   *gamma
+	name   string
+	typ    ast.Type
+	parent *gamma
 }
 
-func (g *gamma) child() *gamma {
-	return &gamma{
-		bindings: make(map[string]ast.Type),
-		parent:   g,
+func newGamma() gamma {
+	return gamma{}
+}
+
+func (g gamma) bind(name string, typ ast.Type) gamma {
+	return gamma{
+		name:   name,
+		typ:    typ,
+		parent: &g,
 	}
 }
 
-func (g *gamma) bind(name string, typ ast.Type) {
-	g.bindings[name] = typ
-}
-
-func (g *gamma) lookup(name string) (ast.Type, bool) {
-	if typ, ok := g.bindings[name]; ok {
-		return typ, true
+func (g gamma) lookup(name string) (ast.Type, bool) {
+	if name == "" {
+		return nil, false
+	}
+	if g.name == name {
+		return g.typ, true
 	}
 	if g.parent != nil {
 		return g.parent.lookup(name)
@@ -40,11 +45,11 @@ func NewTypeChecker() *TypeChecker {
 
 // Check performs type checking and returns a typed AST.
 func (tc *TypeChecker) Check(expr ast.Expr) (ast.TypedExpr, error) {
-	root := &gamma{bindings: make(map[string]ast.Type)}
+	root := newGamma()
 	return tc.checkTyped(expr, root)
 }
 
-func (tc *TypeChecker) checkTyped(expr ast.Expr, g *gamma) (ast.TypedExpr, error) {
+func (tc *TypeChecker) checkTyped(expr ast.Expr, g gamma) (ast.TypedExpr, error) {
 	switch e := expr.(type) {
 	case *ast.VarExpr:
 		return tc.checkVar(e, g)
@@ -66,7 +71,7 @@ func (tc *TypeChecker) checkTyped(expr ast.Expr, g *gamma) (ast.TypedExpr, error
 	}
 }
 
-func (tc *TypeChecker) checkVar(expr *ast.VarExpr, g *gamma) (ast.TypedExpr, error) {
+func (tc *TypeChecker) checkVar(expr *ast.VarExpr, g gamma) (ast.TypedExpr, error) {
 	typ, ok := g.lookup(expr.Name)
 	if !ok {
 		return nil, &UndefinedVariableError{
@@ -77,11 +82,8 @@ func (tc *TypeChecker) checkVar(expr *ast.VarExpr, g *gamma) (ast.TypedExpr, err
 	return ast.NewTypedVarExpr(typ, expr), nil
 }
 
-func (tc *TypeChecker) checkAbs(expr *ast.AbsExpr, g *gamma) (ast.TypedExpr, error) {
-	child := g.child()
-	child.bind(expr.Param, expr.ParamType)
-
-	typedBody, err := tc.checkTyped(expr.Body, child)
+func (tc *TypeChecker) checkAbs(expr *ast.AbsExpr, g gamma) (ast.TypedExpr, error) {
+	typedBody, err := tc.checkTyped(expr.Body, g.bind(expr.Param, expr.ParamType))
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +95,7 @@ func (tc *TypeChecker) checkAbs(expr *ast.AbsExpr, g *gamma) (ast.TypedExpr, err
 	return ast.NewTypedAbsExpr(funcType, expr.Pos, expr.Param, expr.ParamType, typedBody), nil
 }
 
-func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g *gamma) (ast.TypedExpr, error) {
+func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g gamma) (ast.TypedExpr, error) {
 	typedFunc, err := tc.checkTyped(expr.Func, g)
 	if err != nil {
 		return nil, err
@@ -124,7 +126,7 @@ func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g *gamma) (ast.TypedExpr, err
 	return ast.NewTypedAppExpr(ft.To, expr.Pos, typedFunc, typedArg), nil
 }
 
-func (tc *TypeChecker) checkIf(expr *ast.IfExpr, g *gamma) (ast.TypedExpr, error) {
+func (tc *TypeChecker) checkIf(expr *ast.IfExpr, g gamma) (ast.TypedExpr, error) {
 	typedCond, err := tc.checkTyped(expr.Cond, g)
 	if err != nil {
 		return nil, err
