@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/shota3506/gostlc/internal/ast"
 )
 
@@ -61,14 +59,20 @@ func (tc *TypeChecker) check(expr ast.Expr, g *gamma) (ast.Type, error) {
 	case *ast.IfExpr:
 		return tc.checkIf(e, g)
 	default:
-		return nil, fmt.Errorf("unknown expression type: %T", expr)
+		return nil, &UnknownExprTypeError{
+			Pos:  expr.Position(),
+			Expr: expr,
+		}
 	}
 }
 
 func (tc *TypeChecker) checkVar(expr *ast.VarExpr, g *gamma) (ast.Type, error) {
 	typ, ok := g.lookup(expr.Name)
 	if !ok {
-		return nil, &UndefinedVariableError{Name: expr.Name}
+		return nil, &UndefinedVariableError{
+			Pos:  expr.Pos,
+			Name: expr.Name,
+		}
 	}
 	return typ, nil
 }
@@ -95,7 +99,10 @@ func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g *gamma) (ast.Type, error) {
 
 	ft, ok := funcType.(*ast.FuncType)
 	if !ok {
-		return nil, &NotAFunctionError{Type: funcType}
+		return nil, &NotAFunctionError{
+			Pos:  expr.Pos,
+			Type: funcType,
+		}
 	}
 
 	argType, err := tc.check(expr.Arg, g)
@@ -105,6 +112,7 @@ func (tc *TypeChecker) checkApp(expr *ast.AppExpr, g *gamma) (ast.Type, error) {
 
 	if !typesEqual(ft.From, argType) {
 		return nil, &TypeMismatchError{
+			Pos:      expr.Pos,
 			Expected: ft.From,
 			Actual:   argType,
 			Context:  "application",
@@ -121,7 +129,10 @@ func (tc *TypeChecker) checkIf(expr *ast.IfExpr, g *gamma) (ast.Type, error) {
 	}
 
 	if _, ok := condType.(*ast.BooleanType); !ok {
-		return nil, &InvalidConditionTypeError{Type: condType}
+		return nil, &InvalidConditionTypeError{
+			Pos:  expr.Pos,
+			Type: condType,
+		}
 	}
 
 	thenType, err := tc.check(expr.Then, g)
@@ -136,6 +147,7 @@ func (tc *TypeChecker) checkIf(expr *ast.IfExpr, g *gamma) (ast.Type, error) {
 
 	if !typesEqual(thenType, elseType) {
 		return nil, &TypeMismatchError{
+			Pos:      expr.Pos,
 			Expected: thenType,
 			Actual:   elseType,
 			Context:  "if-else branches",

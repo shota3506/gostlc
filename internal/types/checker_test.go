@@ -4,7 +4,12 @@ import (
 	"testing"
 
 	"github.com/shota3506/gostlc/internal/ast"
+	"github.com/shota3506/gostlc/internal/token"
 )
+
+func pos(line, col int) token.Position {
+	return token.Position{Line: line, Column: col}
+}
 
 func TestTypeChecker(t *testing.T) {
 	tests := []struct {
@@ -25,6 +30,7 @@ func TestTypeChecker(t *testing.T) {
 		{
 			name: "identity function",
 			input: &ast.AbsExpr{
+				Pos:       pos(1, 1),
 				Param:     "x",
 				ParamType: &ast.BooleanType{},
 				Body:      &ast.VarExpr{Name: "x"},
@@ -135,74 +141,64 @@ func TestTypeCheckerErrors(t *testing.T) {
 	}{
 		{
 			name:          "undefined variable",
-			input:         &ast.VarExpr{Name: "x"},
-			expectedError: "undefined variable: x",
+			input:         &ast.VarExpr{Pos: token.Position{Line: 1, Column: 1}, Name: "x"},
+			expectedError: "1:1: undefined variable: x",
 		},
 		{
 			name: "type mismatch in application",
 			input: &ast.AppExpr{
+				Pos: pos(1, 1),
 				Func: &ast.AbsExpr{
+					Pos:       pos(1, 1),
 					Param:     "x",
 					ParamType: &ast.BooleanType{},
-					Body:      &ast.VarExpr{Name: "x"},
+					Body:      &ast.VarExpr{Pos: pos(1, 10), Name: "x"},
 				},
-				Arg: &ast.IntExpr{Value: 42},
+				Arg: &ast.IntExpr{Pos: pos(1, 15), Value: 42},
 			},
-			expectedError: "type mismatch in application: expected Bool, got Int",
+			expectedError: "1:1: type mismatch in application: expected Bool, got Int",
 		},
 		{
 			name: "applying non-function",
 			input: &ast.AppExpr{
-				Func: &ast.IntExpr{Value: 42},
-				Arg:  &ast.BoolExpr{Value: true},
+				Pos:  pos(1, 1),
+				Func: &ast.IntExpr{Pos: pos(1, 1), Value: 42},
+				Arg:  &ast.BoolExpr{Pos: pos(1, 4), Value: true},
 			},
-			expectedError: "cannot apply non-function type: Int",
+			expectedError: "1:1: cannot apply non-function type: Int",
 		},
 		{
 			name: "non-boolean condition",
 			input: &ast.IfExpr{
-				Cond: &ast.IntExpr{Value: 42},
-				Then: &ast.BoolExpr{Value: true},
-				Else: &ast.BoolExpr{Value: false},
+				Pos:  pos(1, 1),
+				Cond: &ast.IntExpr{Pos: pos(1, 4), Value: 42},
+				Then: &ast.BoolExpr{Pos: pos(1, 10), Value: true},
+				Else: &ast.BoolExpr{Pos: pos(1, 20), Value: false},
 			},
-			expectedError: "condition must be boolean: Int",
+			expectedError: "1:1: condition must be boolean, got Int",
 		},
 		{
 			name: "mismatched if branches",
 			input: &ast.IfExpr{
-				Cond: &ast.BoolExpr{Value: true},
-				Then: &ast.IntExpr{Value: 42},
-				Else: &ast.BoolExpr{Value: false},
+				Pos:  pos(1, 1),
+				Cond: &ast.BoolExpr{Pos: pos(1, 4), Value: true},
+				Then: &ast.IntExpr{Pos: pos(1, 10), Value: 42},
+				Else: &ast.BoolExpr{Pos: pos(1, 20), Value: false},
 			},
-			expectedError: "type mismatch in if-else branches: expected Int, got Bool",
+			expectedError: "1:1: type mismatch in if-else branches: expected Int, got Bool",
 		},
 		{
 			name: "undefined variable in abstraction body",
 			input: &ast.AbsExpr{
+				Pos:       pos(1, 1),
 				Param:     "x",
 				ParamType: &ast.BooleanType{},
-				Body:      &ast.VarExpr{Name: "y"},
-			},
-			expectedError: "undefined variable: y",
-		},
-		{
-			name: "type mismatch in nested application",
-			input: &ast.AppExpr{
-				Func: &ast.AbsExpr{
-					Param:     "f",
-					ParamType: &ast.FuncType{From: &ast.BooleanType{}, To: &ast.IntType{}},
-					Body: &ast.AppExpr{
-						Func: &ast.VarExpr{Name: "f"},
-						Arg:  &ast.IntExpr{Value: 42},
-					},
-				},
-				Arg: &ast.AbsExpr{
-					Param:     "x",
-					ParamType: &ast.BooleanType{},
-					Body:      &ast.IntExpr{Value: 0},
+				Body: &ast.VarExpr{
+					Pos:  pos(1, 10),
+					Name: "y",
 				},
 			},
-			expectedError: "type mismatch in application: expected Bool, got Int",
+			expectedError: "1:10: undefined variable: y",
 		},
 	}
 

@@ -23,12 +23,13 @@ import (
 
 	"github.com/shota3506/gostlc/internal/ast"
 	"github.com/shota3506/gostlc/internal/lexer"
+	"github.com/shota3506/gostlc/internal/token"
 )
 
 type parser struct {
 	lexer     *lexer.Lexer
-	curToken  lexer.Token
-	peekToken lexer.Token
+	curToken  token.Token
+	peekToken token.Token
 }
 
 // Parse parses the input string and returns the corresponding AST expression.
@@ -72,6 +73,7 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 			return nil, err
 		}
 		expr = &ast.AppExpr{
+			Pos:  expr.Position(),
 			Func: expr,
 			Arg:  arg,
 		}
@@ -80,10 +82,10 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 
 func (p *parser) canStartExpr() bool {
 	switch p.curToken.Kind {
-	case lexer.TokenKindLambda, lexer.TokenKindLParen,
-		lexer.TokenKindTrue, lexer.TokenKindFalse,
-		lexer.TokenKindIf, lexer.TokenKindInt,
-		lexer.TokenKindIdent:
+	case token.TokenKindLambda, token.TokenKindLParen,
+		token.TokenKindTrue, token.TokenKindFalse,
+		token.TokenKindIf, token.TokenKindInt,
+		token.TokenKindIdent:
 		return true
 	default:
 		return false
@@ -93,51 +95,67 @@ func (p *parser) canStartExpr() bool {
 // parsePrimary parses a primary expression (non-application)
 func (p *parser) parsePrimary() (ast.Expr, error) {
 	switch p.curToken.Kind {
-	case lexer.TokenKindLambda:
+	case token.TokenKindLambda:
 		return p.parseAbstraction()
-	case lexer.TokenKindLParen:
+	case token.TokenKindLParen:
 		return p.parseGrouping()
-	case lexer.TokenKindTrue:
+	case token.TokenKindTrue:
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
-		return &ast.BoolExpr{Value: true}, nil
-	case lexer.TokenKindFalse:
+		return &ast.BoolExpr{
+			Pos:   p.curToken.Pos,
+			Value: true,
+		}, nil
+	case token.TokenKindFalse:
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
-		return &ast.BoolExpr{Value: false}, nil
-	case lexer.TokenKindIf:
+		return &ast.BoolExpr{
+			Pos:   p.curToken.Pos,
+			Value: false,
+		}, nil
+	case token.TokenKindIf:
 		return p.parseIfExpr()
-	case lexer.TokenKindInt:
+	case token.TokenKindInt:
 		value := p.curToken.Value
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
 		var intVal int
 		fmt.Sscanf(value, "%d", &intVal)
-		return &ast.IntExpr{Value: intVal}, nil
-	case lexer.TokenKindIdent:
+		return &ast.IntExpr{
+			Pos:   p.curToken.Pos,
+			Value: intVal,
+		}, nil
+	case token.TokenKindIdent:
+		pos := p.curToken.Pos
 		name := p.curToken.Value
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
-		return &ast.VarExpr{Name: name}, nil
+		return &ast.VarExpr{
+			Pos:  pos,
+			Name: name,
+		}, nil
 	default:
-		return nil, fmt.Errorf("unexpected token: %v", p.curToken)
+		return nil, newParseError(p.curToken, fmt.Sprintf("unexpected token: %v", p.curToken.Kind))
 	}
 }
 
 // parseAbstraction parses a lambda abstraction: \var:type. expr
 func (p *parser) parseAbstraction() (ast.Expr, error) {
+	// Save position of lambda
+	pos := p.curToken.Pos
+
 	// Consume '\'
 	if err := p.nextToken(); err != nil {
 		return nil, err
 	}
 
 	// Parse parameter name
-	if p.curToken.Kind != lexer.TokenKindIdent {
-		return nil, fmt.Errorf("expected identifier after '\\', got %v", p.curToken)
+	if p.curToken.Kind != token.TokenKindIdent {
+		return nil, newParseError(p.curToken, fmt.Sprintf("expected identifier after '\\': %v", p.curToken.Kind))
 	}
 	param := p.curToken.Value
 	if err := p.nextToken(); err != nil {
@@ -145,8 +163,8 @@ func (p *parser) parseAbstraction() (ast.Expr, error) {
 	}
 
 	// Expect ':'
-	if p.curToken.Kind != lexer.TokenKindColon {
-		return nil, fmt.Errorf("expected ':' after parameter name, got %v", p.curToken)
+	if p.curToken.Kind != token.TokenKindColon {
+		return nil, newParseError(p.curToken, fmt.Sprintf("expected ':' after parameter name: %v", p.curToken.Kind))
 	}
 	if err := p.nextToken(); err != nil {
 		return nil, err
@@ -159,8 +177,8 @@ func (p *parser) parseAbstraction() (ast.Expr, error) {
 	}
 
 	// Expect '.'
-	if p.curToken.Kind != lexer.TokenKindDot {
-		return nil, fmt.Errorf("expected '.' after parameter type, got %v", p.curToken)
+	if p.curToken.Kind != token.TokenKindDot {
+		return nil, newParseError(p.curToken, fmt.Sprintf("expected '.' after parameter type: %v", p.curToken.Kind))
 	}
 	if err := p.nextToken(); err != nil {
 		return nil, err
@@ -173,6 +191,7 @@ func (p *parser) parseAbstraction() (ast.Expr, error) {
 	}
 
 	return &ast.AbsExpr{
+		Pos:       pos,
 		Param:     param,
 		ParamType: paramType,
 		Body:      body,
@@ -192,8 +211,8 @@ func (p *parser) parseGrouping() (ast.Expr, error) {
 	}
 
 	// Expect ')'
-	if p.curToken.Kind != lexer.TokenKindRParen {
-		return nil, fmt.Errorf("expected ')', got %v", p.curToken)
+	if p.curToken.Kind != token.TokenKindRParen {
+		return nil, newParseError(p.curToken, fmt.Sprintf("expected ')': %v", p.curToken.Kind))
 	}
 	if err := p.nextToken(); err != nil {
 		return nil, err
@@ -204,6 +223,9 @@ func (p *parser) parseGrouping() (ast.Expr, error) {
 
 // parseIfExpr parses a conditional expression
 func (p *parser) parseIfExpr() (ast.Expr, error) {
+	// Save position of 'if'
+	pos := p.curToken.Pos
+
 	// Consume 'if'
 	if err := p.nextToken(); err != nil {
 		return nil, err
@@ -216,8 +238,8 @@ func (p *parser) parseIfExpr() (ast.Expr, error) {
 	}
 
 	// Expect 'then'
-	if p.curToken.Kind != lexer.TokenKindThen {
-		return nil, fmt.Errorf("expected 'then', got %v", p.curToken)
+	if p.curToken.Kind != token.TokenKindThen {
+		return nil, newParseError(p.curToken, fmt.Sprintf("expected 'then': %v", p.curToken.Kind))
 	}
 	if err := p.nextToken(); err != nil {
 		return nil, err
@@ -230,8 +252,8 @@ func (p *parser) parseIfExpr() (ast.Expr, error) {
 	}
 
 	// Expect 'else'
-	if p.curToken.Kind != lexer.TokenKindElse {
-		return nil, fmt.Errorf("expected 'else', got %v", p.curToken)
+	if p.curToken.Kind != token.TokenKindElse {
+		return nil, newParseError(p.curToken, fmt.Sprintf("expected 'else': %v", p.curToken.Kind))
 	}
 	if err := p.nextToken(); err != nil {
 		return nil, err
@@ -244,6 +266,7 @@ func (p *parser) parseIfExpr() (ast.Expr, error) {
 	}
 
 	return &ast.IfExpr{
+		Pos:  pos,
 		Cond: cond,
 		Then: thenExpr,
 		Else: elseExpr,
@@ -258,7 +281,7 @@ func (p *parser) parseType() (ast.Type, error) {
 	}
 
 	// Check for function type (right-associative)
-	if p.curToken.Kind == lexer.TokenKindArrow {
+	if p.curToken.Kind == token.TokenKindArrow {
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
@@ -278,17 +301,17 @@ func (p *parser) parseType() (ast.Type, error) {
 // parseBaseType parses a base type or grouped type
 func (p *parser) parseBaseType() (ast.Type, error) {
 	switch p.curToken.Kind {
-	case lexer.TokenKindBoolType:
+	case token.TokenKindBoolType:
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
 		return &ast.BooleanType{}, nil
-	case lexer.TokenKindIntType:
+	case token.TokenKindIntType:
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
 		return &ast.IntType{}, nil
-	case lexer.TokenKindLParen:
+	case token.TokenKindLParen:
 		// Grouped type
 		if err := p.nextToken(); err != nil {
 			return nil, err
@@ -297,14 +320,14 @@ func (p *parser) parseBaseType() (ast.Type, error) {
 		if err != nil {
 			return nil, err
 		}
-		if p.curToken.Kind != lexer.TokenKindRParen {
-			return nil, fmt.Errorf("expected ')' after type, got %v", p.curToken)
+		if p.curToken.Kind != token.TokenKindRParen {
+			return nil, newParseError(p.curToken, fmt.Sprintf("expected ')': %v", p.curToken.Kind))
 		}
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
 		return typ, nil
 	default:
-		return nil, fmt.Errorf("unexpected token in type: %v", p.curToken)
+		return nil, newParseError(p.curToken, fmt.Sprintf("unexpected token in type: %v", p.curToken.Kind))
 	}
 }

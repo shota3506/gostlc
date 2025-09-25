@@ -6,11 +6,13 @@ import (
 	"io"
 	"log"
 	"strings"
+
+	"github.com/shota3506/gostlc/internal/token"
 )
 
 type LexerError struct {
 	message string
-	pos     Position
+	pos     token.Position
 	err     error
 }
 
@@ -21,7 +23,7 @@ func (e *LexerError) Error() string {
 	return fmt.Sprintf("%d:%d: %s", e.pos.Line, e.pos.Column, e.message)
 }
 
-func (e *LexerError) Pos() Position {
+func (e *LexerError) Pos() token.Position {
 	return e.pos
 }
 
@@ -46,11 +48,11 @@ func newBufferedRuneReader(r io.RuneReader) *bufferedRuneReader {
 	}
 }
 
-func (r *bufferedRuneReader) pos() Position {
-	return Position{Line: r.line, Column: r.colume}
+func (r *bufferedRuneReader) pos() token.Position {
+	return token.Position{Line: r.line, Column: r.colume}
 }
 
-func (r *bufferedRuneReader) Peek() (rune, Position, error) {
+func (r *bufferedRuneReader) Peek() (rune, token.Position, error) {
 	if r.buf != nil {
 		ru := *r.buf
 		return ru, r.pos(), nil
@@ -63,7 +65,7 @@ func (r *bufferedRuneReader) Peek() (rune, Position, error) {
 	return ru, r.pos(), nil
 }
 
-func (r *bufferedRuneReader) Read() (ru rune, pos Position, err error) {
+func (r *bufferedRuneReader) Read() (ru rune, pos token.Position, err error) {
 	defer func() {
 		if err == nil {
 			if ru == '\n' {
@@ -95,18 +97,18 @@ func New(s string) *Lexer {
 	}
 }
 
-func (l *Lexer) Next() (Token, error) {
+func (l *Lexer) Next() (token.Token, error) {
 	l.skipWhitespace()
 
 	ch, pos, err := l.reader.Read()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			return Token{
-				Kind: TokenKindEOF,
+			return token.Token{
+				Kind: token.TokenKindEOF,
 				Pos:  l.reader.pos(),
 			}, nil
 		}
-		return Token{}, &LexerError{
+		return token.Token{}, &LexerError{
 			message: "read character",
 			pos:     pos,
 			err:     err,
@@ -115,25 +117,25 @@ func (l *Lexer) Next() (Token, error) {
 
 	switch ch {
 	case '\\':
-		return Token{Kind: TokenKindLambda, Value: string(ch), Pos: pos}, nil
+		return token.Token{Kind: token.TokenKindLambda, Value: string(ch), Pos: pos}, nil
 	case '.':
-		return Token{Kind: TokenKindDot, Value: string(ch), Pos: pos}, nil
+		return token.Token{Kind: token.TokenKindDot, Value: string(ch), Pos: pos}, nil
 	case ':':
-		return Token{Kind: TokenKindColon, Value: string(ch), Pos: pos}, nil
+		return token.Token{Kind: token.TokenKindColon, Value: string(ch), Pos: pos}, nil
 	case '(':
-		return Token{Kind: TokenKindLParen, Value: string(ch), Pos: pos}, nil
+		return token.Token{Kind: token.TokenKindLParen, Value: string(ch), Pos: pos}, nil
 	case ')':
-		return Token{Kind: TokenKindRParen, Value: string(ch), Pos: pos}, nil
+		return token.Token{Kind: token.TokenKindRParen, Value: string(ch), Pos: pos}, nil
 	case '-':
 		nextCh, nextPos, err := l.reader.Peek()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return Token{}, &LexerError{
+				return token.Token{}, &LexerError{
 					message: "unexpected eof after '-'",
 					pos:     nextPos,
 				}
 			}
-			return Token{}, &LexerError{
+			return token.Token{}, &LexerError{
 				message: "read character",
 				pos:     nextPos,
 				err:     err,
@@ -141,17 +143,17 @@ func (l *Lexer) Next() (Token, error) {
 		}
 		if nextCh == '>' {
 			_, _, _ = l.reader.Read()
-			return Token{Kind: TokenKindArrow, Value: "->", Pos: pos}, nil
+			return token.Token{Kind: token.TokenKindArrow, Value: "->", Pos: pos}, nil
 		}
-		return Token{}, &LexerError{
+		return token.Token{}, &LexerError{
 			message: fmt.Sprintf("unexpected character after '-': %q", nextCh),
 			pos:     nextPos,
 		}
 	}
 
 	if isDigit(ch) {
-		return Token{
-			Kind:  TokenKindInt,
+		return token.Token{
+			Kind:  token.TokenKindInt,
 			Value: l.readInteger(ch),
 			Pos:   pos,
 		}, nil
@@ -161,29 +163,29 @@ func (l *Lexer) Next() (Token, error) {
 		ident := l.readIdentifier(ch)
 		switch ident {
 		case "true":
-			return Token{Kind: TokenKindTrue, Value: ident, Pos: pos}, nil
+			return token.Token{Kind: token.TokenKindTrue, Value: ident, Pos: pos}, nil
 		case "false":
-			return Token{Kind: TokenKindFalse, Value: ident, Pos: pos}, nil
+			return token.Token{Kind: token.TokenKindFalse, Value: ident, Pos: pos}, nil
 		case "if":
-			return Token{Kind: TokenKindIf, Value: ident, Pos: pos}, nil
+			return token.Token{Kind: token.TokenKindIf, Value: ident, Pos: pos}, nil
 		case "then":
-			return Token{Kind: TokenKindThen, Value: ident, Pos: pos}, nil
+			return token.Token{Kind: token.TokenKindThen, Value: ident, Pos: pos}, nil
 		case "else":
-			return Token{Kind: TokenKindElse, Value: ident, Pos: pos}, nil
+			return token.Token{Kind: token.TokenKindElse, Value: ident, Pos: pos}, nil
 		case "Bool":
-			return Token{Kind: TokenKindBoolType, Value: ident, Pos: pos}, nil
+			return token.Token{Kind: token.TokenKindBoolType, Value: ident, Pos: pos}, nil
 		case "Int":
-			return Token{Kind: TokenKindIntType, Value: ident, Pos: pos}, nil
+			return token.Token{Kind: token.TokenKindIntType, Value: ident, Pos: pos}, nil
 		default:
-			return Token{
-				Kind:  TokenKindIdent,
+			return token.Token{
+				Kind:  token.TokenKindIdent,
 				Value: ident,
 				Pos:   pos,
 			}, nil
 		}
 	}
 
-	return Token{}, &LexerError{
+	return token.Token{}, &LexerError{
 		message: fmt.Sprintf("unexpected character: %q", ch),
 		pos:     pos,
 	}
