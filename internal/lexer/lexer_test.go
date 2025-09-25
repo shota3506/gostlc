@@ -188,6 +188,14 @@ func TestLexer(t *testing.T) {
 				{Kind: token.TokenKindEOF, Value: "", Pos: token.Position{Line: 1, Column: 3}},
 			},
 		},
+		{
+			name:  "Negative integer literal",
+			input: `-123`,
+			expected: []token.Token{
+				{Kind: token.TokenKindInt, Value: "-123", Pos: token.Position{Line: 1, Column: 1}},
+				{Kind: token.TokenKindEOF, Value: "", Pos: token.Position{Line: 1, Column: 5}},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			l := lexer.New(tt.input)

@@ -20,6 +20,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/shota3506/gostlc/internal/ast"
 	"github.com/shota3506/gostlc/internal/lexer"
@@ -119,14 +120,17 @@ func (p *parser) parsePrimary() (ast.Expr, error) {
 		return p.parseIfExpr()
 	case token.TokenKindInt:
 		value := p.curToken.Value
+		pos := p.curToken.Pos
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
-		var intVal int
-		fmt.Sscanf(value, "%d", &intVal)
+		intVal, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return nil, newParseError(p.curToken, fmt.Sprintf("invalid integer literal: %v", value))
+		}
 		return &ast.IntExpr{
-			Pos:   p.curToken.Pos,
-			Value: intVal,
+			Pos:   pos,
+			Value: int(intVal),
 		}, nil
 	case token.TokenKindIdent:
 		pos := p.curToken.Pos

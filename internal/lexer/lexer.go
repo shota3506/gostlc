@@ -145,6 +145,14 @@ func (l *Lexer) Next() (token.Token, error) {
 			_, _, _ = l.reader.Read()
 			return token.Token{Kind: token.TokenKindArrow, Value: "->", Pos: pos}, nil
 		}
+		if isDigit(nextCh) {
+			_, _, _ = l.reader.Read()
+			return token.Token{
+				Kind:  token.TokenKindInt,
+				Value: "-" + l.readInteger(nextCh),
+				Pos:   pos,
+			}, nil
+		}
 		return token.Token{}, &LexerError{
 			message: fmt.Sprintf("unexpected character after '-': %q", nextCh),
 			pos:     nextPos,

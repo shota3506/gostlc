@@ -149,6 +149,11 @@ func TestParser(t *testing.T) {
 			input:    `42`,
 			expected: &ast.IntExpr{Value: 42},
 		},
+		{
+			name:     "Negative integer literal",
+			input:    `-456`,
+			expected: &ast.IntExpr{Value: -456},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := parser.Parse(tt.input)
