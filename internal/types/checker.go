@@ -5,48 +5,16 @@ import (
 	"github.com/shota3506/gostlc/internal/builtin"
 )
 
-// gamma represents the type environment for variable bindings.
-type gamma struct {
-	name   string
-	typ    ast.Type
-	parent *gamma
-}
-
-func newGamma() gamma {
-	return gamma{}
-}
-
-func (g gamma) bind(name string, typ ast.Type) gamma {
-	return gamma{
-		name:   name,
-		typ:    typ,
-		parent: &g,
-	}
-}
-
-func (g gamma) lookup(name string) (ast.Type, bool) {
-	if name == "" {
-		return nil, false
-	}
-	if g.name == name {
-		return g.typ, true
-	}
-	if g.parent != nil {
-		return g.parent.lookup(name)
-	}
-	return nil, false
-}
-
 // Check performs type checking and returns a typed AST.
 func Check(expr ast.Expr) (ast.TypedExpr, error) {
-	root := newGamma()
+	root := NewGamma()
 	for ident, typ := range builtin.FunctionTypes {
-		root = root.bind(ident, typ)
+		root = root.Bind(ident, typ)
 	}
 	return checkTyped(expr, root)
 }
 
-func checkTyped(expr ast.Expr, g gamma) (ast.TypedExpr, error) {
+func checkTyped(expr ast.Expr, g *Gamma) (ast.TypedExpr, error) {
 	switch e := expr.(type) {
 	case *ast.VarExpr:
 		return checkVar(e, g)
@@ -68,8 +36,8 @@ func checkTyped(expr ast.Expr, g gamma) (ast.TypedExpr, error) {
 	}
 }
 
-func checkVar(expr *ast.VarExpr, g gamma) (ast.TypedExpr, error) {
-	typ, ok := g.lookup(expr.Name)
+func checkVar(expr *ast.VarExpr, g *Gamma) (ast.TypedExpr, error) {
+	typ, ok := g.Lookup(expr.Name)
 	if !ok {
 		return nil, &UndefinedVariableError{
 			Pos:  expr.Pos,
@@ -79,8 +47,8 @@ func checkVar(expr *ast.VarExpr, g gamma) (ast.TypedExpr, error) {
 	return ast.NewTypedVarExpr(typ, expr), nil
 }
 
-func checkAbs(expr *ast.AbsExpr, g gamma) (ast.TypedExpr, error) {
-	typedBody, err := checkTyped(expr.Body, g.bind(expr.Param, expr.ParamType))
+func checkAbs(expr *ast.AbsExpr, g *Gamma) (ast.TypedExpr, error) {
+	typedBody, err := checkTyped(expr.Body, g.Bind(expr.Param, expr.ParamType))
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +60,7 @@ func checkAbs(expr *ast.AbsExpr, g gamma) (ast.TypedExpr, error) {
 	return ast.NewTypedAbsExpr(funcType, expr.Pos, expr.Param, expr.ParamType, typedBody), nil
 }
 
-func checkApp(expr *ast.AppExpr, g gamma) (ast.TypedExpr, error) {
+func checkApp(expr *ast.AppExpr, g *Gamma) (ast.TypedExpr, error) {
 	typedFunc, err := checkTyped(expr.Func, g)
 	if err != nil {
 		return nil, err
@@ -123,7 +91,7 @@ func checkApp(expr *ast.AppExpr, g gamma) (ast.TypedExpr, error) {
 	return ast.NewTypedAppExpr(ft.To, expr.Pos, typedFunc, typedArg), nil
 }
 
-func checkIf(expr *ast.IfExpr, g gamma) (ast.TypedExpr, error) {
+func checkIf(expr *ast.IfExpr, g *Gamma) (ast.TypedExpr, error) {
 	typedCond, err := checkTyped(expr.Cond, g)
 	if err != nil {
 		return nil, err

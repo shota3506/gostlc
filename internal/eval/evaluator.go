@@ -16,7 +16,7 @@ func Eval(expr ast.TypedExpr) (values.Value, error) {
 	return evalExpr(expr, root)
 }
 
-func evalExpr(expr ast.TypedExpr, env values.Rho) (values.Value, error) {
+func evalExpr(expr ast.TypedExpr, env *values.Rho) (values.Value, error) {
 	switch e := expr.(type) {
 	case *ast.TypedIntExpr:
 		return &values.IntValue{Value: e.Value}, nil

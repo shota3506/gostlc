@@ -1,32 +1,9 @@
 package values
 
-type Rho struct {
-	name   string
-	value  Value
-	parent *Rho
-}
+import "github.com/shota3506/gostlc/internal/environment"
 
-func NewRho() Rho {
-	return Rho{}
-}
+type Rho = environment.Environment[Value]
 
-func (r Rho) Lookup(name string) (Value, bool) {
-	if name == "" {
-		return nil, false
-	}
-	if r.name == name {
-		return r.value, true
-	}
-	if r.parent != nil {
-		return r.parent.Lookup(name)
-	}
-	return nil, false
-}
-
-func (r Rho) Bind(name string, value Value) Rho {
-	return Rho{
-		name:   name,
-		value:  value,
-		parent: &r,
-	}
+func NewRho() *Rho {
+	return environment.NewEnvironment[Value]()
 }

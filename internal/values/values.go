@@ -37,7 +37,7 @@ type Closure struct {
 	Param     string
 	ParamType ast.Type
 	Body      ast.TypedExpr
-	Env       Rho
+	Env       *Rho
 }
 
 func (c *Closure) value() {}
