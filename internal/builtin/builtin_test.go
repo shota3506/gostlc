@@ -353,3 +353,513 @@ func TestNotFunction(t *testing.T) {
 		})
 	}
 }
+
+func TestEqFunction(t *testing.T) {
+	eqFunc := Functions["eq"].(*values.BuiltinFunc)
+
+	tests := []struct {
+		name     string
+		arg1     values.Value
+		arg2     values.Value
+		expected bool
+	}{
+		{
+			name:     "equal positive numbers",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 5},
+			expected: true,
+		},
+		{
+			name:     "different positive numbers",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 3},
+			expected: false,
+		},
+		{
+			name:     "equal negative numbers",
+			arg1:     &values.IntValue{Value: -10},
+			arg2:     &values.IntValue{Value: -10},
+			expected: true,
+		},
+		{
+			name:     "different negative numbers",
+			arg1:     &values.IntValue{Value: -5},
+			arg2:     &values.IntValue{Value: -3},
+			expected: false,
+		},
+		{
+			name:     "zero equality",
+			arg1:     &values.IntValue{Value: 0},
+			arg2:     &values.IntValue{Value: 0},
+			expected: true,
+		},
+		{
+			name:     "zero and non-zero",
+			arg1:     &values.IntValue{Value: 0},
+			arg2:     &values.IntValue{Value: 1},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result1, err := eqFunc.Fn(tt.arg1)
+			if err != nil {
+				t.Fatalf("Unexpected error on first application: %v", err)
+			}
+
+			partialFunc, ok := result1.(*values.PartialBuiltinFunc)
+			if !ok {
+				t.Fatalf("First application did not return PartialBuiltinFunc")
+			}
+
+			result2, err := partialFunc.Fn(tt.arg2)
+			if err != nil {
+				t.Fatalf("Unexpected error on second application: %v", err)
+			}
+
+			boolResult, ok := result2.(*values.BoolValue)
+			if !ok {
+				t.Fatalf("Result is not BoolValue")
+			}
+
+			if boolResult.Value != tt.expected {
+				t.Errorf("eq(%d, %d) = %v, expected %v",
+					tt.arg1.(*values.IntValue).Value,
+					tt.arg2.(*values.IntValue).Value,
+					boolResult.Value,
+					tt.expected,
+				)
+			}
+		})
+	}
+}
+
+func TestNeFunction(t *testing.T) {
+	neFunc := Functions["ne"].(*values.BuiltinFunc)
+
+	tests := []struct {
+		name     string
+		arg1     values.Value
+		arg2     values.Value
+		expected bool
+	}{
+		{
+			name:     "equal numbers",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 5},
+			expected: false,
+		},
+		{
+			name:     "different positive numbers",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 3},
+			expected: true,
+		},
+		{
+			name:     "equal negative numbers",
+			arg1:     &values.IntValue{Value: -10},
+			arg2:     &values.IntValue{Value: -10},
+			expected: false,
+		},
+		{
+			name:     "different negative numbers",
+			arg1:     &values.IntValue{Value: -5},
+			arg2:     &values.IntValue{Value: -3},
+			expected: true,
+		},
+		{
+			name:     "zero equality",
+			arg1:     &values.IntValue{Value: 0},
+			arg2:     &values.IntValue{Value: 0},
+			expected: false,
+		},
+		{
+			name:     "zero and non-zero",
+			arg1:     &values.IntValue{Value: 0},
+			arg2:     &values.IntValue{Value: 1},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result1, err := neFunc.Fn(tt.arg1)
+			if err != nil {
+				t.Fatalf("Unexpected error on first application: %v", err)
+			}
+
+			partialFunc, ok := result1.(*values.PartialBuiltinFunc)
+			if !ok {
+				t.Fatalf("First application did not return PartialBuiltinFunc")
+			}
+
+			result2, err := partialFunc.Fn(tt.arg2)
+			if err != nil {
+				t.Fatalf("Unexpected error on second application: %v", err)
+			}
+
+			boolResult, ok := result2.(*values.BoolValue)
+			if !ok {
+				t.Fatalf("Result is not BoolValue")
+			}
+
+			if boolResult.Value != tt.expected {
+				t.Errorf("ne(%d, %d) = %v, expected %v",
+					tt.arg1.(*values.IntValue).Value,
+					tt.arg2.(*values.IntValue).Value,
+					boolResult.Value,
+					tt.expected,
+				)
+			}
+		})
+	}
+}
+
+func TestLtFunction(t *testing.T) {
+	ltFunc := Functions["lt"].(*values.BuiltinFunc)
+
+	tests := []struct {
+		name     string
+		arg1     values.Value
+		arg2     values.Value
+		expected bool
+	}{
+		{
+			name:     "less than positive",
+			arg1:     &values.IntValue{Value: 3},
+			arg2:     &values.IntValue{Value: 5},
+			expected: true,
+		},
+		{
+			name:     "greater than positive",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 3},
+			expected: false,
+		},
+		{
+			name:     "equal values",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 5},
+			expected: false,
+		},
+		{
+			name:     "negative less than positive",
+			arg1:     &values.IntValue{Value: -5},
+			arg2:     &values.IntValue{Value: 3},
+			expected: true,
+		},
+		{
+			name:     "negative values",
+			arg1:     &values.IntValue{Value: -10},
+			arg2:     &values.IntValue{Value: -5},
+			expected: true,
+		},
+		{
+			name:     "zero comparisons",
+			arg1:     &values.IntValue{Value: 0},
+			arg2:     &values.IntValue{Value: 1},
+			expected: true,
+		},
+		{
+			name:     "negative and zero",
+			arg1:     &values.IntValue{Value: -1},
+			arg2:     &values.IntValue{Value: 0},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result1, err := ltFunc.Fn(tt.arg1)
+			if err != nil {
+				t.Fatalf("Unexpected error on first application: %v", err)
+			}
+
+			partialFunc, ok := result1.(*values.PartialBuiltinFunc)
+			if !ok {
+				t.Fatalf("First application did not return PartialBuiltinFunc")
+			}
+
+			result2, err := partialFunc.Fn(tt.arg2)
+			if err != nil {
+				t.Fatalf("Unexpected error on second application: %v", err)
+			}
+
+			boolResult, ok := result2.(*values.BoolValue)
+			if !ok {
+				t.Fatalf("Result is not BoolValue")
+			}
+
+			if boolResult.Value != tt.expected {
+				t.Errorf("lt(%d, %d) = %v, expected %v",
+					tt.arg1.(*values.IntValue).Value,
+					tt.arg2.(*values.IntValue).Value,
+					boolResult.Value,
+					tt.expected,
+				)
+			}
+		})
+	}
+}
+
+func TestLeFunction(t *testing.T) {
+	leFunc := Functions["le"].(*values.BuiltinFunc)
+
+	tests := []struct {
+		name     string
+		arg1     values.Value
+		arg2     values.Value
+		expected bool
+	}{
+		{
+			name:     "less than",
+			arg1:     &values.IntValue{Value: 3},
+			arg2:     &values.IntValue{Value: 5},
+			expected: true,
+		},
+		{
+			name:     "equal values",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 5},
+			expected: true,
+		},
+		{
+			name:     "greater than",
+			arg1:     &values.IntValue{Value: 7},
+			arg2:     &values.IntValue{Value: 5},
+			expected: false,
+		},
+		{
+			name:     "negative less than positive",
+			arg1:     &values.IntValue{Value: -5},
+			arg2:     &values.IntValue{Value: 3},
+			expected: true,
+		},
+		{
+			name:     "equal negative values",
+			arg1:     &values.IntValue{Value: -5},
+			arg2:     &values.IntValue{Value: -5},
+			expected: true,
+		},
+		{
+			name:     "zero comparisons",
+			arg1:     &values.IntValue{Value: 0},
+			arg2:     &values.IntValue{Value: 0},
+			expected: true,
+		},
+		{
+			name:     "negative and zero",
+			arg1:     &values.IntValue{Value: -1},
+			arg2:     &values.IntValue{Value: 0},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result1, err := leFunc.Fn(tt.arg1)
+			if err != nil {
+				t.Fatalf("Unexpected error on first application: %v", err)
+			}
+
+			partialFunc, ok := result1.(*values.PartialBuiltinFunc)
+			if !ok {
+				t.Fatalf("First application did not return PartialBuiltinFunc")
+			}
+
+			result2, err := partialFunc.Fn(tt.arg2)
+			if err != nil {
+				t.Fatalf("Unexpected error on second application: %v", err)
+			}
+
+			boolResult, ok := result2.(*values.BoolValue)
+			if !ok {
+				t.Fatalf("Result is not BoolValue")
+			}
+
+			if boolResult.Value != tt.expected {
+				t.Errorf("le(%d, %d) = %v, expected %v",
+					tt.arg1.(*values.IntValue).Value,
+					tt.arg2.(*values.IntValue).Value,
+					boolResult.Value,
+					tt.expected,
+				)
+			}
+		})
+	}
+}
+
+func TestGtFunction(t *testing.T) {
+	gtFunc := Functions["gt"].(*values.BuiltinFunc)
+
+	tests := []struct {
+		name     string
+		arg1     values.Value
+		arg2     values.Value
+		expected bool
+	}{
+		{
+			name:     "greater than positive",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 3},
+			expected: true,
+		},
+		{
+			name:     "less than positive",
+			arg1:     &values.IntValue{Value: 3},
+			arg2:     &values.IntValue{Value: 5},
+			expected: false,
+		},
+		{
+			name:     "equal values",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 5},
+			expected: false,
+		},
+		{
+			name:     "positive greater than negative",
+			arg1:     &values.IntValue{Value: 3},
+			arg2:     &values.IntValue{Value: -5},
+			expected: true,
+		},
+		{
+			name:     "negative values",
+			arg1:     &values.IntValue{Value: -5},
+			arg2:     &values.IntValue{Value: -10},
+			expected: true,
+		},
+		{
+			name:     "zero comparisons",
+			arg1:     &values.IntValue{Value: 1},
+			arg2:     &values.IntValue{Value: 0},
+			expected: true,
+		},
+		{
+			name:     "zero and negative",
+			arg1:     &values.IntValue{Value: 0},
+			arg2:     &values.IntValue{Value: -1},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result1, err := gtFunc.Fn(tt.arg1)
+			if err != nil {
+				t.Fatalf("Unexpected error on first application: %v", err)
+			}
+
+			partialFunc, ok := result1.(*values.PartialBuiltinFunc)
+			if !ok {
+				t.Fatalf("First application did not return PartialBuiltinFunc")
+			}
+
+			result2, err := partialFunc.Fn(tt.arg2)
+			if err != nil {
+				t.Fatalf("Unexpected error on second application: %v", err)
+			}
+
+			boolResult, ok := result2.(*values.BoolValue)
+			if !ok {
+				t.Fatalf("Result is not BoolValue")
+			}
+
+			if boolResult.Value != tt.expected {
+				t.Errorf("gt(%d, %d) = %v, expected %v",
+					tt.arg1.(*values.IntValue).Value,
+					tt.arg2.(*values.IntValue).Value,
+					boolResult.Value,
+					tt.expected,
+				)
+			}
+		})
+	}
+}
+
+func TestGeFunction(t *testing.T) {
+	geFunc := Functions["ge"].(*values.BuiltinFunc)
+
+	tests := []struct {
+		name     string
+		arg1     values.Value
+		arg2     values.Value
+		expected bool
+	}{
+		{
+			name:     "greater than",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 3},
+			expected: true,
+		},
+		{
+			name:     "equal values",
+			arg1:     &values.IntValue{Value: 5},
+			arg2:     &values.IntValue{Value: 5},
+			expected: true,
+		},
+		{
+			name:     "less than",
+			arg1:     &values.IntValue{Value: 3},
+			arg2:     &values.IntValue{Value: 5},
+			expected: false,
+		},
+		{
+			name:     "positive greater than negative",
+			arg1:     &values.IntValue{Value: 3},
+			arg2:     &values.IntValue{Value: -5},
+			expected: true,
+		},
+		{
+			name:     "equal negative values",
+			arg1:     &values.IntValue{Value: -5},
+			arg2:     &values.IntValue{Value: -5},
+			expected: true,
+		},
+		{
+			name:     "zero comparisons",
+			arg1:     &values.IntValue{Value: 0},
+			arg2:     &values.IntValue{Value: 0},
+			expected: true,
+		},
+		{
+			name:     "zero and negative",
+			arg1:     &values.IntValue{Value: 0},
+			arg2:     &values.IntValue{Value: -1},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result1, err := geFunc.Fn(tt.arg1)
+			if err != nil {
+				t.Fatalf("Unexpected error on first application: %v", err)
+			}
+
+			partialFunc, ok := result1.(*values.PartialBuiltinFunc)
+			if !ok {
+				t.Fatalf("First application did not return PartialBuiltinFunc")
+			}
+
+			result2, err := partialFunc.Fn(tt.arg2)
+			if err != nil {
+				t.Fatalf("Unexpected error on second application: %v", err)
+			}
+
+			boolResult, ok := result2.(*values.BoolValue)
+			if !ok {
+				t.Fatalf("Result is not BoolValue")
+			}
+
+			if boolResult.Value != tt.expected {
+				t.Errorf("ge(%d, %d) = %v, expected %v",
+					tt.arg1.(*values.IntValue).Value,
+					tt.arg2.(*values.IntValue).Value,
+					boolResult.Value,
+					tt.expected,
+				)
+			}
+		})
+	}
+}

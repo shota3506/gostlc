@@ -13,7 +13,7 @@ This is a toy interpreter for self learning purposes.
 - Type system: Static type checking with Int and Bool base types, plus function types
 - Conditional expressions: if-then-else constructs with type checking
 - Literals: Integer and boolean literal support
-- Builtin functions: Arithmetic operations (add, sub) with currying support
+- Builtin functions: Arithmetic, boolean, comparison operations with currying support
 
 ### Language Features
 
@@ -48,6 +48,14 @@ var  ::= letter (letter | digit)*          (* variable names *)
 Arithmetic operations:
 - `add : Int -> Int -> Int` - Addition
 - `sub : Int -> Int -> Int` - Subtraction
+
+Comparison operations:
+- `eq : Int -> Int -> Bool` - Equality
+- `ne : Int -> Int -> Bool` - Inequality
+- `lt : Int -> Int -> Bool` - Less than
+- `le : Int -> Int -> Bool` - Less than or equal
+- `gt : Int -> Int -> Bool` - Greater than
+- `ge : Int -> Int -> Bool` - Greater than or equal
 
 Boolean operations:
 - `and : Bool -> Bool -> Bool` - Logical AND
@@ -170,6 +178,37 @@ if (and true true) then 1 else 0
 # Result: 1
 ```
 
+### Comparison Operations
+```stlc
+# Equality
+eq 5 5
+# Result: true
+
+# Inequality
+ne 3 7
+# Result: true
+
+# Less than
+lt 3 5
+# Result: true
+
+# Less than or equal
+le 5 5
+# Result: true
+
+# Greater than
+gt 10 3
+# Result: true
+
+# Greater than or equal
+ge 7 7
+# Result: true
+
+# Using comparisons with conditionals
+if (lt 3 5) then 100 else 200
+# Result: 100
+```
+
 ## TODOs
 
 - Let bindings: `let x = e1 in e2` for local variable binding
@@ -179,7 +218,6 @@ if (and true true) then 1 else 0
 - Unit type: `()` for side-effect operations
 - Type inference: Hindley-Milner style type inference to reduce type annotations
 - Arithmetic operators: mul, div, mod (add and sub are already implemented)
-- Comparison operators: eq, ne, lt, le, gt, ge
 - String type and operations: String literals and concatenation
 - Debugger: AST inspection and step-by-step evaluation
 

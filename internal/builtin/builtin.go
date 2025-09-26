@@ -2,10 +2,32 @@ package builtin
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/shota3506/gostlc/internal/ast"
 	"github.com/shota3506/gostlc/internal/values"
 )
+
+func binaryOp[T, U values.Value](f func(a, b T) U) func(arg1 values.Value) (values.Value, error) {
+	return func(arg1 values.Value) (values.Value, error) {
+		tArg1, ok := arg1.(T)
+		if !ok {
+			return nil, fmt.Errorf("type mismatch")
+		}
+		return &values.PartialBuiltinFunc{
+			Name:       "and",
+			ParamType:  &ast.BoolType{},
+			ReturnType: &ast.BoolType{},
+			Fn: func(arg2 values.Value) (values.Value, error) {
+				tArg2, ok := arg2.(T)
+				if !ok {
+					return nil, errors.New("type mismatch")
+				}
+				return f(tArg1, tArg2), nil
+			},
+		}, nil
+	}
+}
 
 var FunctionTypes = map[string]ast.Type{
 	// Arithmetic operations
@@ -42,6 +64,49 @@ var FunctionTypes = map[string]ast.Type{
 		From: &ast.BoolType{},
 		To:   &ast.BoolType{},
 	},
+	// Comparison operations
+	"eq": &ast.FuncType{
+		From: &ast.IntType{},
+		To: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+	},
+	"ne": &ast.FuncType{
+		From: &ast.IntType{},
+		To: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+	},
+	"lt": &ast.FuncType{
+		From: &ast.IntType{},
+		To: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+	},
+	"le": &ast.FuncType{
+		From: &ast.IntType{},
+		To: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+	},
+	"gt": &ast.FuncType{
+		From: &ast.IntType{},
+		To: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+	},
+	"ge": &ast.FuncType{
+		From: &ast.IntType{},
+		To: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+	},
 }
 
 var Functions = map[string]values.Value{
@@ -52,24 +117,9 @@ var Functions = map[string]values.Value{
 			From: &ast.IntType{},
 			To:   &ast.IntType{},
 		},
-		Fn: func(arg1 values.Value) (values.Value, error) {
-			intArg1, ok := arg1.(*values.IntValue)
-			if !ok {
-				return nil, errors.New("type mismatch: expected Int")
-			}
-			return &values.PartialBuiltinFunc{
-				Name:       "add",
-				ParamType:  &ast.IntType{},
-				ReturnType: &ast.IntType{},
-				Fn: func(arg2 values.Value) (values.Value, error) {
-					intArg2, ok := arg2.(*values.IntValue)
-					if !ok {
-						return nil, errors.New("type mismatch: expected Int")
-					}
-					return &values.IntValue{Value: intArg1.Value + intArg2.Value}, nil
-				},
-			}, nil
-		},
+		Fn: binaryOp(func(a, b *values.IntValue) *values.IntValue {
+			return &values.IntValue{Value: a.Value + b.Value}
+		}),
 	},
 	"sub": &values.BuiltinFunc{
 		Name:      "sub",
@@ -78,24 +128,9 @@ var Functions = map[string]values.Value{
 			From: &ast.IntType{},
 			To:   &ast.IntType{},
 		},
-		Fn: func(arg1 values.Value) (values.Value, error) {
-			intArg1, ok := arg1.(*values.IntValue)
-			if !ok {
-				return nil, errors.New("type mismatch: expected Int")
-			}
-			return &values.PartialBuiltinFunc{
-				Name:       "sub",
-				ParamType:  &ast.IntType{},
-				ReturnType: &ast.IntType{},
-				Fn: func(arg2 values.Value) (values.Value, error) {
-					intArg2, ok := arg2.(*values.IntValue)
-					if !ok {
-						return nil, errors.New("type mismatch: expected Int")
-					}
-					return &values.IntValue{Value: intArg1.Value - intArg2.Value}, nil
-				},
-			}, nil
-		},
+		Fn: binaryOp(func(a, b *values.IntValue) *values.IntValue {
+			return &values.IntValue{Value: a.Value - b.Value}
+		}),
 	},
 	"and": &values.BuiltinFunc{
 		Name:      "and",
@@ -104,24 +139,9 @@ var Functions = map[string]values.Value{
 			From: &ast.BoolType{},
 			To:   &ast.BoolType{},
 		},
-		Fn: func(arg1 values.Value) (values.Value, error) {
-			boolArg1, ok := arg1.(*values.BoolValue)
-			if !ok {
-				return nil, errors.New("type mismatch: expected Bool")
-			}
-			return &values.PartialBuiltinFunc{
-				Name:       "and",
-				ParamType:  &ast.BoolType{},
-				ReturnType: &ast.BoolType{},
-				Fn: func(arg2 values.Value) (values.Value, error) {
-					boolArg2, ok := arg2.(*values.BoolValue)
-					if !ok {
-						return nil, errors.New("type mismatch: expected Bool")
-					}
-					return &values.BoolValue{Value: boolArg1.Value && boolArg2.Value}, nil
-				},
-			}, nil
-		},
+		Fn: binaryOp(func(a, b *values.BoolValue) *values.BoolValue {
+			return &values.BoolValue{Value: a.Value && b.Value}
+		}),
 	},
 	"or": &values.BuiltinFunc{
 		Name:      "or",
@@ -130,24 +150,9 @@ var Functions = map[string]values.Value{
 			From: &ast.BoolType{},
 			To:   &ast.BoolType{},
 		},
-		Fn: func(arg1 values.Value) (values.Value, error) {
-			boolArg1, ok := arg1.(*values.BoolValue)
-			if !ok {
-				return nil, errors.New("type mismatch: expected Bool")
-			}
-			return &values.PartialBuiltinFunc{
-				Name:       "or",
-				ParamType:  &ast.BoolType{},
-				ReturnType: &ast.BoolType{},
-				Fn: func(arg2 values.Value) (values.Value, error) {
-					boolArg2, ok := arg2.(*values.BoolValue)
-					if !ok {
-						return nil, errors.New("type mismatch: expected Bool")
-					}
-					return &values.BoolValue{Value: boolArg1.Value || boolArg2.Value}, nil
-				},
-			}, nil
-		},
+		Fn: binaryOp(func(a, b *values.BoolValue) *values.BoolValue {
+			return &values.BoolValue{Value: a.Value || b.Value}
+		}),
 	},
 	"not": &values.BuiltinFunc{
 		Name:       "not",
@@ -160,5 +165,71 @@ var Functions = map[string]values.Value{
 			}
 			return &values.BoolValue{Value: !boolArg.Value}, nil
 		},
+	},
+	"eq": &values.BuiltinFunc{
+		Name:      "eq",
+		ParamType: &ast.IntType{},
+		ReturnType: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+		Fn: binaryOp(func(a, b *values.IntValue) *values.BoolValue {
+			return &values.BoolValue{Value: a.Value == b.Value}
+		}),
+	},
+	"ne": &values.BuiltinFunc{
+		Name:      "ne",
+		ParamType: &ast.IntType{},
+		ReturnType: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+		Fn: binaryOp(func(a, b *values.IntValue) *values.BoolValue {
+			return &values.BoolValue{Value: a.Value != b.Value}
+		}),
+	},
+	"lt": &values.BuiltinFunc{
+		Name:      "lt",
+		ParamType: &ast.IntType{},
+		ReturnType: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+		Fn: binaryOp(func(a, b *values.IntValue) *values.BoolValue {
+			return &values.BoolValue{Value: a.Value < b.Value}
+		}),
+	},
+	"le": &values.BuiltinFunc{
+		Name:      "le",
+		ParamType: &ast.IntType{},
+		ReturnType: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+		Fn: binaryOp(func(a, b *values.IntValue) *values.BoolValue {
+			return &values.BoolValue{Value: a.Value <= b.Value}
+		}),
+	},
+	"gt": &values.BuiltinFunc{
+		Name:      "gt",
+		ParamType: &ast.IntType{},
+		ReturnType: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+		Fn: binaryOp(func(a, b *values.IntValue) *values.BoolValue {
+			return &values.BoolValue{Value: a.Value > b.Value}
+		}),
+	},
+	"ge": &values.BuiltinFunc{
+		Name:      "ge",
+		ParamType: &ast.IntType{},
+		ReturnType: &ast.FuncType{
+			From: &ast.IntType{},
+			To:   &ast.BoolType{},
+		},
+		Fn: binaryOp(func(a, b *values.IntValue) *values.BoolValue {
+			return &values.BoolValue{Value: a.Value >= b.Value}
+		}),
 	},
 }
