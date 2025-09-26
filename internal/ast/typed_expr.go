@@ -84,7 +84,7 @@ func NewTypedBoolExpr(expr *BoolExpr) *TypedBoolExpr {
 
 func (TypedBoolExpr) typedExprNode()              {}
 func (e *TypedBoolExpr) Position() token.Position { return e.Pos }
-func (e *TypedBoolExpr) Type() Type               { return &BooleanType{} }
+func (e *TypedBoolExpr) Type() Type               { return &BoolType{} }
 
 type TypedIntExpr struct {
 	IntExpr

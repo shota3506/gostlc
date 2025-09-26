@@ -157,18 +157,18 @@ func TestTypeChecker(t *testing.T) {
 			input: &ast.AbsExpr{
 				Pos:       pos(1, 1),
 				Param:     "x",
-				ParamType: &ast.BooleanType{},
+				ParamType: &ast.BoolType{},
 				Body:      &ast.VarExpr{Pos: pos(1, 10), Name: "x"},
 			},
 			expected: ast.NewTypedAbsExpr(
 				&ast.FuncType{
-					From: &ast.BooleanType{},
-					To:   &ast.BooleanType{},
+					From: &ast.BoolType{},
+					To:   &ast.BoolType{},
 				},
 				pos(1, 1),
 				"x",
-				&ast.BooleanType{},
-				ast.NewTypedVarExpr(&ast.BooleanType{}, &ast.VarExpr{Pos: pos(1, 10), Name: "x"}),
+				&ast.BoolType{},
+				ast.NewTypedVarExpr(&ast.BoolType{}, &ast.VarExpr{Pos: pos(1, 10), Name: "x"}),
 			),
 		},
 		{
@@ -180,7 +180,7 @@ func TestTypeChecker(t *testing.T) {
 				Body: &ast.AbsExpr{
 					Pos:       pos(2, 1),
 					Param:     "y",
-					ParamType: &ast.BooleanType{},
+					ParamType: &ast.BoolType{},
 					Body:      &ast.VarExpr{Pos: pos(2, 10), Name: "x"},
 				},
 			},
@@ -188,7 +188,7 @@ func TestTypeChecker(t *testing.T) {
 				&ast.FuncType{
 					From: &ast.IntType{},
 					To: &ast.FuncType{
-						From: &ast.BooleanType{},
+						From: &ast.BoolType{},
 						To:   &ast.IntType{},
 					},
 				},
@@ -197,12 +197,12 @@ func TestTypeChecker(t *testing.T) {
 				&ast.IntType{},
 				ast.NewTypedAbsExpr(
 					&ast.FuncType{
-						From: &ast.BooleanType{},
+						From: &ast.BoolType{},
 						To:   &ast.IntType{},
 					},
 					pos(2, 1),
 					"y",
-					&ast.BooleanType{},
+					&ast.BoolType{},
 					ast.NewTypedVarExpr(&ast.IntType{}, &ast.VarExpr{Pos: pos(2, 10), Name: "x"}),
 				),
 			),
@@ -214,23 +214,23 @@ func TestTypeChecker(t *testing.T) {
 				Func: &ast.AbsExpr{
 					Pos:       pos(1, 1),
 					Param:     "x",
-					ParamType: &ast.BooleanType{},
+					ParamType: &ast.BoolType{},
 					Body:      &ast.VarExpr{Pos: pos(1, 10), Name: "x"},
 				},
 				Arg: &ast.BoolExpr{Pos: pos(1, 15), Value: true},
 			},
 			expected: ast.NewTypedAppExpr(
-				&ast.BooleanType{},
+				&ast.BoolType{},
 				pos(1, 1),
 				ast.NewTypedAbsExpr(
 					&ast.FuncType{
-						From: &ast.BooleanType{},
-						To:   &ast.BooleanType{},
+						From: &ast.BoolType{},
+						To:   &ast.BoolType{},
 					},
 					pos(1, 1),
 					"x",
-					&ast.BooleanType{},
-					ast.NewTypedVarExpr(&ast.BooleanType{}, &ast.VarExpr{Pos: pos(1, 10), Name: "x"}),
+					&ast.BoolType{},
+					ast.NewTypedVarExpr(&ast.BoolType{}, &ast.VarExpr{Pos: pos(1, 10), Name: "x"}),
 				),
 				ast.NewTypedBoolExpr(&ast.BoolExpr{Pos: pos(1, 15), Value: true}),
 			),
@@ -271,13 +271,13 @@ func TestTypeChecker(t *testing.T) {
 				Pos:   pos(1, 1),
 				Param: "f",
 				ParamType: &ast.FuncType{
-					From: &ast.BooleanType{},
+					From: &ast.BoolType{},
 					To:   &ast.IntType{},
 				},
 				Body: &ast.AbsExpr{
 					Pos:       pos(2, 1),
 					Param:     "x",
-					ParamType: &ast.BooleanType{},
+					ParamType: &ast.BoolType{},
 					Body: &ast.AppExpr{
 						Pos:  pos(3, 1),
 						Func: &ast.VarExpr{Pos: pos(3, 1), Name: "f"},
@@ -288,40 +288,40 @@ func TestTypeChecker(t *testing.T) {
 			expected: ast.NewTypedAbsExpr(
 				&ast.FuncType{
 					From: &ast.FuncType{
-						From: &ast.BooleanType{},
+						From: &ast.BoolType{},
 						To:   &ast.IntType{},
 					},
 					To: &ast.FuncType{
-						From: &ast.BooleanType{},
+						From: &ast.BoolType{},
 						To:   &ast.IntType{},
 					},
 				},
 				pos(1, 1),
 				"f",
 				&ast.FuncType{
-					From: &ast.BooleanType{},
+					From: &ast.BoolType{},
 					To:   &ast.IntType{},
 				},
 				ast.NewTypedAbsExpr(
 					&ast.FuncType{
-						From: &ast.BooleanType{},
+						From: &ast.BoolType{},
 						To:   &ast.IntType{},
 					},
 					pos(2, 1),
 					"x",
-					&ast.BooleanType{},
+					&ast.BoolType{},
 					ast.NewTypedAppExpr(
 						&ast.IntType{},
 						pos(3, 1),
 						ast.NewTypedVarExpr(
 							&ast.FuncType{
-								From: &ast.BooleanType{},
+								From: &ast.BoolType{},
 								To:   &ast.IntType{},
 							},
 							&ast.VarExpr{Pos: pos(3, 1), Name: "f"},
 						),
 						ast.NewTypedVarExpr(
-							&ast.BooleanType{},
+							&ast.BoolType{},
 							&ast.VarExpr{Pos: pos(3, 10), Name: "x"},
 						),
 					),
@@ -363,7 +363,7 @@ func TestTypeCheckerErrors(t *testing.T) {
 				Func: &ast.AbsExpr{
 					Pos:       pos(1, 1),
 					Param:     "x",
-					ParamType: &ast.BooleanType{},
+					ParamType: &ast.BoolType{},
 					Body:      &ast.VarExpr{Pos: pos(1, 10), Name: "x"},
 				},
 				Arg: &ast.IntExpr{Pos: pos(1, 15), Value: 42},
@@ -404,7 +404,7 @@ func TestTypeCheckerErrors(t *testing.T) {
 			input: &ast.AbsExpr{
 				Pos:       pos(1, 1),
 				Param:     "x",
-				ParamType: &ast.BooleanType{},
+				ParamType: &ast.BoolType{},
 				Body: &ast.VarExpr{
 					Pos:  pos(1, 10),
 					Name: "y",
@@ -436,8 +436,8 @@ func TestTypesEqual(t *testing.T) {
 	}{
 		{
 			name:  "same boolean types",
-			t1:    &ast.BooleanType{},
-			t2:    &ast.BooleanType{},
+			t1:    &ast.BoolType{},
+			t2:    &ast.BoolType{},
 			equal: true,
 		},
 		{
@@ -448,18 +448,18 @@ func TestTypesEqual(t *testing.T) {
 		},
 		{
 			name:  "different base types",
-			t1:    &ast.BooleanType{},
+			t1:    &ast.BoolType{},
 			t2:    &ast.IntType{},
 			equal: false,
 		},
 		{
 			name: "same function types",
 			t1: &ast.FuncType{
-				From: &ast.BooleanType{},
+				From: &ast.BoolType{},
 				To:   &ast.IntType{},
 			},
 			t2: &ast.FuncType{
-				From: &ast.BooleanType{},
+				From: &ast.BoolType{},
 				To:   &ast.IntType{},
 			},
 			equal: true,
@@ -467,7 +467,7 @@ func TestTypesEqual(t *testing.T) {
 		{
 			name: "different function parameter types",
 			t1: &ast.FuncType{
-				From: &ast.BooleanType{},
+				From: &ast.BoolType{},
 				To:   &ast.IntType{},
 			},
 			t2: &ast.FuncType{
@@ -479,12 +479,12 @@ func TestTypesEqual(t *testing.T) {
 		{
 			name: "different function return types",
 			t1: &ast.FuncType{
-				From: &ast.BooleanType{},
+				From: &ast.BoolType{},
 				To:   &ast.IntType{},
 			},
 			t2: &ast.FuncType{
-				From: &ast.BooleanType{},
-				To:   &ast.BooleanType{},
+				From: &ast.BoolType{},
+				To:   &ast.BoolType{},
 			},
 			equal: false,
 		},
@@ -492,17 +492,17 @@ func TestTypesEqual(t *testing.T) {
 			name: "nested function types",
 			t1: &ast.FuncType{
 				From: &ast.FuncType{
-					From: &ast.BooleanType{},
+					From: &ast.BoolType{},
 					To:   &ast.IntType{},
 				},
-				To: &ast.BooleanType{},
+				To: &ast.BoolType{},
 			},
 			t2: &ast.FuncType{
 				From: &ast.FuncType{
-					From: &ast.BooleanType{},
+					From: &ast.BoolType{},
 					To:   &ast.IntType{},
 				},
-				To: &ast.BooleanType{},
+				To: &ast.BoolType{},
 			},
 			equal: true,
 		},
@@ -510,9 +510,8 @@ func TestTypesEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := typesEqual(tt.t1, tt.t2)
-			if got != tt.equal {
-				t.Errorf("typesEqual() = %v, want %v", got, tt.equal)
+			if got := tt.t1.Equal(tt.t2); got != tt.equal {
+				t.Errorf("types.Equal() = %v, want %v", got, tt.equal)
 			}
 		})
 	}

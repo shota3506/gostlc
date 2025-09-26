@@ -19,7 +19,7 @@ func TestParser(t *testing.T) {
 			expected: &ast.AppExpr{
 				Func: &ast.AbsExpr{
 					Param:     "x",
-					ParamType: &ast.BooleanType{},
+					ParamType: &ast.BoolType{},
 					Body:      &ast.VarExpr{Name: "x"},
 				},
 				Arg: &ast.BoolExpr{Value: true},
@@ -91,10 +91,10 @@ func TestParser(t *testing.T) {
 				Func: &ast.AppExpr{
 					Func: &ast.AbsExpr{
 						Param:     "x",
-						ParamType: &ast.BooleanType{},
+						ParamType: &ast.BoolType{},
 						Body: &ast.AbsExpr{
 							Param:     "y",
-							ParamType: &ast.BooleanType{},
+							ParamType: &ast.BoolType{},
 							Body:      &ast.VarExpr{Name: "x"},
 						},
 					},
@@ -129,8 +129,8 @@ func TestParser(t *testing.T) {
 				Func: &ast.AbsExpr{
 					Param: "f",
 					ParamType: &ast.FuncType{
-						From: &ast.BooleanType{},
-						To:   &ast.BooleanType{},
+						From: &ast.BoolType{},
+						To:   &ast.BoolType{},
 					},
 					Body: &ast.AppExpr{
 						Func: &ast.VarExpr{Name: "f"},
@@ -139,7 +139,7 @@ func TestParser(t *testing.T) {
 				},
 				Arg: &ast.AbsExpr{
 					Param:     "x",
-					ParamType: &ast.BooleanType{},
+					ParamType: &ast.BoolType{},
 					Body:      &ast.VarExpr{Name: "x"},
 				},
 			},
@@ -215,8 +215,8 @@ func equalType(a, b ast.Type) bool {
 	}
 
 	switch x := a.(type) {
-	case *ast.BooleanType:
-		_, ok := b.(*ast.BooleanType)
+	case *ast.BoolType:
+		_, ok := b.(*ast.BoolType)
 		return ok
 
 	case *ast.IntType:

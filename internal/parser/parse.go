@@ -309,7 +309,7 @@ func (p *parser) parseBaseType() (ast.Type, error) {
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
-		return &ast.BooleanType{}, nil
+		return &ast.BoolType{}, nil
 	case token.TokenKindIntType:
 		if err := p.nextToken(); err != nil {
 			return nil, err

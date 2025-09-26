@@ -45,9 +45,14 @@ var  ::= letter (letter | digit)*          (* variable names *)
 
 #### Builtin Functions
 
+Arithmetic operations:
 - `add : Int -> Int -> Int` - Addition
 - `sub : Int -> Int -> Int` - Subtraction
 
+Boolean operations:
+- `and : Bool -> Bool -> Bool` - Logical AND
+- `or : Bool -> Bool -> Bool` - Logical OR
+- `not : Bool -> Bool` - Logical NOT
 
 ## Installation
 
@@ -124,7 +129,7 @@ if (\x:Bool. x) true then 100 else 200
 # Result: 10
 ```
 
-### Arithmetic with Builtin Functions
+### Arithmetic Operations
 ```stlc
 # Simple arithmetic
 add 2 3
@@ -142,6 +147,29 @@ add (sub 10 3) 5
 # Result: 12
 ```
 
+### Boolean Operations
+```stlc
+# Logical AND
+and true false
+# Result: false
+
+# Logical OR
+or false true
+# Result: true
+
+# Logical NOT
+not true
+# Result: false
+
+# Complex boolean expressions
+and (or false true) (not false)
+# Result: true
+
+# Using with conditionals
+if (and true true) then 1 else 0
+# Result: 1
+```
+
 ## TODOs
 
 - Let bindings: `let x = e1 in e2` for local variable binding
@@ -152,10 +180,8 @@ add (sub 10 3) 5
 - Type inference: Hindley-Milner style type inference to reduce type annotations
 - Arithmetic operators: mul, div, mod (add and sub are already implemented)
 - Comparison operators: eq, ne, lt, le, gt, ge
-- Boolean operators: and, or, not
 - String type and operations: String literals and concatenation
 - Debugger: AST inspection and step-by-step evaluation
-
 
 ## License
 

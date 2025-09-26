@@ -111,7 +111,7 @@ func checkApp(expr *ast.AppExpr, g gamma) (ast.TypedExpr, error) {
 		return nil, err
 	}
 
-	if !typesEqual(ft.From, typedArg.Type()) {
+	if !ft.From.Equal(typedArg.Type()) {
 		return nil, &TypeMismatchError{
 			Pos:      expr.Pos,
 			Expected: ft.From,
@@ -129,7 +129,7 @@ func checkIf(expr *ast.IfExpr, g gamma) (ast.TypedExpr, error) {
 		return nil, err
 	}
 
-	if _, ok := typedCond.Type().(*ast.BooleanType); !ok {
+	if _, ok := typedCond.Type().(*ast.BoolType); !ok {
 		return nil, &InvalidConditionTypeError{
 			Pos:  expr.Pos,
 			Type: typedCond.Type(),
@@ -146,7 +146,7 @@ func checkIf(expr *ast.IfExpr, g gamma) (ast.TypedExpr, error) {
 		return nil, err
 	}
 
-	if !typesEqual(typedThen.Type(), typedElse.Type()) {
+	if !typedThen.Type().Equal(typedElse.Type()) {
 		return nil, &TypeMismatchError{
 			Pos:      expr.Pos,
 			Expected: typedThen.Type(),
@@ -155,23 +155,4 @@ func checkIf(expr *ast.IfExpr, g gamma) (ast.TypedExpr, error) {
 		}
 	}
 	return ast.NewTypedIfExpr(expr.Pos, typedCond, typedThen, typedElse), nil
-}
-
-func typesEqual(t1, t2 ast.Type) bool {
-	switch typ1 := t1.(type) {
-	case *ast.BooleanType:
-		_, ok := t2.(*ast.BooleanType)
-		return ok
-	case *ast.IntType:
-		_, ok := t2.(*ast.IntType)
-		return ok
-	case *ast.FuncType:
-		typ2, ok := t2.(*ast.FuncType)
-		if !ok {
-			return false
-		}
-		return typesEqual(typ1.From, typ2.From) && typesEqual(typ1.To, typ2.To)
-	default:
-		return false
-	}
 }
